@@ -2,17 +2,28 @@
 #include <fstream>
 #include <vector>
 #include <sstream>
+#include <cstdlib>
 #include <limits>
 
-int main() {
-    std::ifstream file("data.txt"); // Asume que el archivo de entrada se llama "data.txt"
-    if (!file.is_open()) {
-        std::cerr << "No se pudo abrir el archivo." << std::endl;
+int main(int argc, char *argv[]) {
+    if (argc < 2 || argc > 3) {
+        std::cerr << "Uso: " << argv[0] << " <nombre del archivo> [numero de matrices]" << std::endl;
         return 1;
     }
 
+    std::ifstream file(argv[1]);
+    if (!file.is_open()) {
+        std::cerr << "No se pudo abrir el archivo " << argv[1] << "." << std::endl;
+        return 1;
+    }
+
+    int max_matrices = (argc == 3) ? std::atoi(argv[2]) : std::numeric_limits<int>::max();
+    int matrices_read = 0;
+
     int n;
-    while (file >> n) {
+    while (file >> n && matrices_read < max_matrices) {
+        matrices_read++;
+
         // Leer la línea en blanco después del número
         file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
