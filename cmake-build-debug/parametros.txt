@@ -1,0 +1,4 @@
+nombre_del_archivo=test_data.txt
+semilla=
+algoritmo=
+otros_parametros=ingesta
