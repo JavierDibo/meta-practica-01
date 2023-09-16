@@ -1,54 +1,81 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <sstream>
-#include <cstdlib>
+#include <string>
+#include <map>
 #include <limits>
 
+int ingestaDeDatos(const std::string &nombreArchivo);
+
 int main(int argc, char *argv[]) {
-    if (argc < 2 || argc > 3) {
-        std::cerr << "Uso: " << argv[0] << " <nombre del archivo> [numero de matrices]" << std::endl;
+    if (argc != 2) {
+        std::cerr << "Uso: " << argv[0] << " <nombre del archivo de parametros>" << std::endl;
         return 1;
     }
 
-    std::ifstream file(argv[1]);
-    if (!file.is_open()) {
+    std::ifstream paramFile(argv[1]);
+    if (!paramFile.is_open()) {
         std::cerr << "No se pudo abrir el archivo " << argv[1] << "." << std::endl;
         return 1;
     }
 
-    int max_matrices = (argc == 3) ? std::atoi(argv[2]) : std::numeric_limits<int>::max();
-    int matrices_read = 0;
+    std::map<std::string, std::string> parametros;
+
+    std::string line;
+    while (std::getline(paramFile, line)) {
+        size_t pos = line.find('=');
+        if (pos != std::string::npos) {
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
+            key.erase(0, key.find_first_not_of(' '));
+            key.erase(key.find_last_not_of(' ') + 1);
+            value.erase(0, value.find_first_not_of(' '));
+            value.erase(value.find_last_not_of(' ') + 1);
+            parametros[key] = value;
+        }
+    }
+
+    paramFile.close();
+
+    if (parametros["otros_parametros"] == "ingesta") {
+        int result = ingestaDeDatos(parametros["nombre_del_archivo"]);
+        if (result != 0) {
+            return result;
+        }
+    }
+
+    return 0;
+}
+
+int ingestaDeDatos(const std::string &nombreArchivo) {
+    std::ifstream dataFile(nombreArchivo);
+    if (!dataFile.is_open()) {
+        std::cerr << "No se pudo abrir el archivo " << nombreArchivo << "." << std::endl;
+        return 1;
+    }
 
     int n;
-    while (file >> n && matrices_read < max_matrices) {
-        matrices_read++;
-
-        // Leer la línea en blanco después del número
-        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    while (dataFile >> n) {
+        dataFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
         std::vector<std::vector<int>> flujo(n, std::vector<int>(n));
         std::vector<std::vector<int>> distancias(n, std::vector<int>(n));
 
-        // Leer la matriz de flujo
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                file >> flujo[i][j];
+                dataFile >> flujo[i][j];
             }
         }
 
-        // Leer la línea en blanco entre las matrices
-        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        dataFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-        // Leer la matriz de distancias
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                file >> distancias[i][j];
+                dataFile >> distancias[i][j];
             }
         }
 
-        // Imprimir las matrices para verificar
-        std::cout << "Tamaño: " << n << std::endl;
+        std::cout << "Tamanno: " << n << std::endl;
         std::cout << "Matriz de flujo:" << std::endl;
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
@@ -68,6 +95,6 @@ int main(int argc, char *argv[]) {
         std::cout << "----------------------------------\n";
     }
 
-    file.close();
+    dataFile.close();
     return 0;
 }
