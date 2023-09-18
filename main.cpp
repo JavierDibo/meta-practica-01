@@ -7,42 +7,17 @@
 
 int ingestaDeDatos(const std::string &nombreArchivo);
 
+int lecturaParametros(const std::string &nombreArchivo);
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        std::cerr << "Uso: " << argv[0] << " <nombre del archivo de parametros>" << std::endl;
+        std::cerr << "main::Uso: " << argv[0] << " <nombre del archivoParametros de parametros>" << std::endl;
         return 1;
     }
 
-    std::ifstream paramFile(argv[1]);
-    if (!paramFile.is_open()) {
-        std::cerr << "No se pudo abrir el archivo " << argv[1] << "." << std::endl;
-        return 1;
-    }
+    std::string archivoParametros = argv[1];
 
-    std::map<std::string, std::string> parametros;
-
-    std::string line;
-    while (std::getline(paramFile, line)) {
-        size_t pos = line.find('=');
-        if (pos != std::string::npos) {
-            std::string key = line.substr(0, pos);
-            std::string value = line.substr(pos + 1);
-            key.erase(0, key.find_first_not_of(' '));
-            key.erase(key.find_last_not_of(' ') + 1);
-            value.erase(0, value.find_first_not_of(' '));
-            value.erase(value.find_last_not_of(' ') + 1);
-            parametros[key] = value;
-        }
-    }
-
-    paramFile.close();
-
-    if (parametros["otros_parametros"] == "ingesta") {
-        int result = ingestaDeDatos(parametros["nombre_del_archivo"]);
-        if (result != 0) {
-            return result;
-        }
-    }
+    lecturaParametros(archivoParametros);
 
     return 0;
 }
@@ -50,7 +25,7 @@ int main(int argc, char *argv[]) {
 int ingestaDeDatos(const std::string &nombreArchivo) {
     std::ifstream dataFile(nombreArchivo);
     if (!dataFile.is_open()) {
-        std::cerr << "No se pudo abrir el archivo " << nombreArchivo << "." << std::endl;
+        std::cerr << "ingestaDeDatos::No se pudo abrir el archivo " << nombreArchivo << std::endl;
         return 1;
     }
 
@@ -96,5 +71,41 @@ int ingestaDeDatos(const std::string &nombreArchivo) {
     }
 
     dataFile.close();
+    return 0;
+}
+
+int lecturaParametros(const std::string &nombreArchivo) {
+
+    std::ifstream paramFile(nombreArchivo);
+    if (!paramFile.is_open()) {
+        std::cerr << "lecturaParametros::No se pudo abrir el archivo " << nombreArchivo << std::endl;
+        return 1;
+    }
+
+    std::map<std::string, std::string> parametros;
+
+    std::string line;
+    while (std::getline(paramFile, line)) {
+        size_t pos = line.find('=');
+        if (pos != std::string::npos) {
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
+            key.erase(0, key.find_first_not_of(' '));
+            key.erase(key.find_last_not_of(' ') + 1);
+            value.erase(0, value.find_first_not_of(' '));
+            value.erase(value.find_last_not_of(' ') + 1);
+            parametros[key] = value;
+        }
+    }
+
+    paramFile.close();
+
+    if (parametros["otros_parametros"] == "ingesta") {
+        int result = ingestaDeDatos(parametros["nombre_del_archivo"]);
+        if (result != 0) {
+            return result;
+        }
+    }
+
     return 0;
 }

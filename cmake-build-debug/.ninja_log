@@ -1,15 +1,9 @@
 # ninja log v5
-3	710	7163182883657956	CMakeFiles/meta_practica_01.dir/main.cpp.obj	f4f5af00bda6e8ab
-710	854	7163182885072298	meta_practica_01.exe	7406fe7593eb3794
-2	836	7165591237175242	CMakeFiles/meta_practica_01.dir/main.cpp.obj	3655a1da9f36813d
-838	1044	7165591239234812	meta_practica_01.exe	db5af6da33c8a250
-4	1134	7165592490405654	CMakeFiles/meta_practica_01.dir/main.cpp.obj	3655a1da9f36813d
-1135	1307	7165592492115653	meta_practica_01.exe	db5af6da33c8a250
-3	1126	7165593074487373	CMakeFiles/meta_practica_01.dir/main.cpp.obj	3655a1da9f36813d
-1126	1327	7165593076462348	meta_practica_01.exe	db5af6da33c8a250
-3	878	7165594444761956	CMakeFiles/meta_practica_01.dir/main.cpp.obj	3655a1da9f36813d
-879	1018	7165594446141959	meta_practica_01.exe	db5af6da33c8a250
-3	863	7165596697987553	CMakeFiles/meta_practica_01.dir/main.cpp.obj	3655a1da9f36813d
-864	1009	7165596699427529	meta_practica_01.exe	db5af6da33c8a250
 3	759	7165596866037935	CMakeFiles/meta_practica_01.dir/main.cpp.obj	3655a1da9f36813d
 759	882	7165596867247919	meta_practica_01.exe	db5af6da33c8a250
+8	1354	7165672857685128	CMakeFiles/meta_practica_01.dir/main.cpp.obj	5436a08c7f8b3670
+1354	1753	7165672861641441	meta_practica_01.exe	db5af6da33c8a250
+5	1514	7167285144510485	CMakeFiles/meta_practica_01.dir/main.cpp.obj	5436a08c7f8b3670
+1514	1997	7167285149318471	meta_practica_01.exe	db5af6da33c8a250
+6	1306	7167286192630349	CMakeFiles/meta_practica_01.dir/main.cpp.obj	5436a08c7f8b3670
+1307	1620	7167286195591953	meta_practica_01.exe	db5af6da33c8a250
