@@ -4,10 +4,13 @@
 #include <string>
 #include <map>
 #include <limits>
+#include <algorithm>
 
-int ingestaDeDatos(const std::string &nombreArchivo);
+int ingestaDeDatos(const std::string &nombreArchivo, std::vector<std::vector<int>> &sumas, int &tam);
 
 int lecturaParametros(const std::string &nombreArchivo);
+
+int algoritmoGreedy(std::string &nombreArchivo);
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -19,58 +22,66 @@ int main(int argc, char *argv[]) {
 
     lecturaParametros(archivoParametros);
 
+
     return 0;
 }
 
-int ingestaDeDatos(const std::string &nombreArchivo) {
-    std::ifstream dataFile(nombreArchivo);
-    if (!dataFile.is_open()) {
+int ingestaDeDatos(const std::string &nombreArchivo, std::vector<std::vector<int>> &sumas, int &tam) {
+    std::ifstream archivo(nombreArchivo);
+    if (!archivo.is_open()) {
         std::cerr << "ingestaDeDatos::No se pudo abrir el archivo " << nombreArchivo << std::endl;
         return 1;
     }
 
     int n;
-    while (dataFile >> n) {
-        dataFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    while (archivo >> n) {
+        archivo.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
         std::vector<std::vector<int>> flujo(n, std::vector<int>(n));
         std::vector<std::vector<int>> distancias(n, std::vector<int>(n));
+        std::vector<int> sumatorioFlujos(n);
+        std::vector<int> sumatorioDistancias(n);
 
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                dataFile >> flujo[i][j];
+                archivo >> flujo[i][j];
             }
         }
 
-        dataFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        archivo.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                dataFile >> distancias[i][j];
+                archivo >> distancias[i][j];
             }
         }
 
         std::cout << "Tamanno: " << n << std::endl;
-        std::cout << "Matriz de flujo:" << std::endl;
+        // std::cout << "Matriz de flujo:" << std::endl;
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                std::cout << flujo[i][j] << " ";
+                // std::cout << flujo[i][j] << " ";
+                sumatorioFlujos[i] += flujo[i][j];
+
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
         }
 
-        std::cout << "\nMatriz de distancias:" << std::endl;
+        // std::cout << "\nMatriz de distancias:" << std::endl;
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                std::cout << distancias[i][j] << " ";
+                // std::cout << distancias[i][j] << " ";
+                sumatorioDistancias[i] += distancias[i][j];
             }
-            std::cout << std::endl;
+            // std::cout << std::endl;
         }
 
-        std::cout << "----------------------------------\n";
+        sumas.push_back(sumatorioFlujos);
+        sumas.push_back(sumatorioDistancias);
+        tam = n;
     }
 
-    dataFile.close();
+    archivo.close();
     return 0;
 }
 
@@ -101,10 +112,58 @@ int lecturaParametros(const std::string &nombreArchivo) {
     paramFile.close();
 
     if (parametros["otros_parametros"] == "ingesta") {
-        int result = ingestaDeDatos(parametros["nombre_del_archivo"]);
-        if (result != 0) {
-            return result;
+        if (parametros["algoritmo"] == "greedy") {
+            return algoritmoGreedy(parametros["nombre_del_archivo"]);
         }
+    }
+
+    return 0;
+}
+
+int algoritmoGreedy(std::string &nombreArchivo) {
+    int tam;
+    std::vector<std::vector<int>> sumas;
+    int result = ingestaDeDatos(nombreArchivo, sumas, tam);
+    if (result != 0) {
+        return result;
+    }
+
+    /*
+     std::cout << "Suma de flujos por unidad:" << std::endl;
+    for (int i = 0; i < tam; ++i) {
+        std::cout << sumas[0][i] << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Suma de distancias por unidad:" << std::endl;
+    for (int i = 0; i < tam; ++i) {
+        std::cout << sumas[1][i] << " ";
+    }
+    std::cout << std::endl;
+     */
+
+    std::vector<std::pair<int, int>> sumasIndizadas[2];
+
+    for (int j = 0; j < 2; j++) {
+        for (size_t i = 0; i < sumas[j].size(); i++) {
+            sumasIndizadas[j].emplace_back(sumas[j][i], i);
+        }
+    }
+
+    std::sort(sumasIndizadas[0].begin(), sumasIndizadas[0].end());
+
+    std::sort(sumasIndizadas[1].begin(), sumasIndizadas[1].end(),
+              [](const std::pair<int, int> &a, const std::pair<int, int> &b) {
+                  return a.first > b.first;
+              });
+
+    std::cout << "------------------------------------------" << std::endl;
+    for (size_t i = 0; i < sumasIndizadas[0].size(); i++) {
+        std::cout << "Unidad " << sumasIndizadas[0][i].second + 1 << " (F=" << sumasIndizadas[0][i].first << ")"
+                  << " --> "
+                  << "Localizacion: " << sumasIndizadas[1][i].second + 1 << " (D=" << sumasIndizadas[1][i].first
+                  << ")"
+                  << std::endl;
     }
 
     return 0;
