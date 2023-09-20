@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
 
     lecturaParametros(archivoParametros);
 
-
     return 0;
 }
 
@@ -57,23 +56,17 @@ int ingestaDeDatos(const std::string &nombreArchivo, std::vector<std::vector<int
         }
 
         std::cout << "Tamanno: " << n << std::endl;
-        // std::cout << "Matriz de flujo:" << std::endl;
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                // std::cout << flujo[i][j] << " ";
                 sumatorioFlujos[i] += flujo[i][j];
 
             }
-            // std::cout << std::endl;
         }
 
-        // std::cout << "\nMatriz de distancias:" << std::endl;
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
-                // std::cout << distancias[i][j] << " ";
                 sumatorioDistancias[i] += distancias[i][j];
             }
-            // std::cout << std::endl;
         }
 
         sumas.push_back(sumatorioFlujos);
@@ -127,20 +120,6 @@ int algoritmoGreedy(std::string &nombreArchivo) {
     if (result != 0) {
         return result;
     }
-
-    /*
-     std::cout << "Suma de flujos por unidad:" << std::endl;
-    for (int i = 0; i < tam; ++i) {
-        std::cout << sumas[0][i] << " ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Suma de distancias por unidad:" << std::endl;
-    for (int i = 0; i < tam; ++i) {
-        std::cout << sumas[1][i] << " ";
-    }
-    std::cout << std::endl;
-     */
 
     std::vector<std::pair<int, int>> sumasIndizadas[2];
 
