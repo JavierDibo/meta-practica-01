@@ -1,4 +1,4 @@
-nombre_del_archivo=datos/ford03.dat
-semilla=
-algoritmo=bit
+nombre_del_archivo=datos/ford01.dat
+semilla=2,3,4,5,6,7,8,9
+algoritmo=bitr
 otros_parametros=

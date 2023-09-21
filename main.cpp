@@ -18,16 +18,14 @@ void algoritmoGreedy(std::string &nombreArchivo);
 
 std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo);
 
-std::pair<std::vector<int>, int>
-PMDLBrandom(const std::vector<int> &solucion_inicial, const std::vector<std::vector<int>> &flujo,
-            const std::vector<std::vector<int>> &distancia, unsigned int semilla);
+std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo);
 
 int funcionObjetivo(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
                     const std::vector<std::vector<int>> &distancia);
 
 std::vector<int> intercambio(const std::vector<int> &p, int r, int s);
 
-void test_PMDLBit();
+std::vector<int> semillas;
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -72,6 +70,8 @@ ingestaDeDatos(const std::string &nombreArchivo, int &tamannoMatriz) {
 
     archivo.close();
 
+    std::cout << "\nArchivo " << nombreArchivo << " procesado correctamente." << std::endl;
+
     return std::make_pair(flujo, distancias);
 }
 
@@ -101,6 +101,15 @@ void lecturaParametros(const std::string &nombreArchivo) {
 
     paramFile.close();
 
+    if (parametros.find("semilla") != parametros.end()) {
+        std::string seeds_string = parametros["semilla"];
+        std::stringstream ss(seeds_string);
+        std::string seed;
+        while (std::getline(ss, seed, ',')) {
+            semillas.push_back(std::stoi(seed));
+        }
+    }
+
     if (parametros["algoritmo"] == "greedy") {
         algoritmoGreedy(parametros["nombre_del_archivo"]);
     }
@@ -108,9 +117,16 @@ void lecturaParametros(const std::string &nombreArchivo) {
     if (parametros["algoritmo"] == "bit") {
         PMDLBit(parametros["nombre_del_archivo"]);
     }
+
+    if (parametros["algoritmo"] == "bitr") {
+        PMDLBitrandom(parametros["nombre_del_archivo"]);
+    }
 }
 
 void algoritmoGreedy(std::string &nombreArchivo) {
+
+    std::cout << "\nResultados del algoritmo Greedy" << std::endl << "---------------------------------"
+              << std::endl;
 
     int tamannoMatriz;
     auto matrices = ingestaDeDatos(nombreArchivo, tamannoMatriz);
@@ -146,7 +162,6 @@ void algoritmoGreedy(std::string &nombreArchivo) {
     auto flujosIndizados = funcionOrdenar(sumatorioFlujos);
     auto distanciasIndizadas = funcionOrdenar(sumatorioDistancias, true);
 
-    std::cout << "\nResultados algoritmo Greedy:" << std::endl;
     std::cout << "| Unidad >> Pos | Flujo | Dist |" << std::endl;
     std::cout << "|---------------|-------|------|" << std::endl;
 
@@ -178,8 +193,10 @@ std::vector<int> intercambio(const std::vector<int> &p, int r, int s) {
     return p_copia;
 }
 
-std::pair<std::vector<int>, int>
-PMDLBit(const std::string &nombreArchivo) {
+std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo) {
+
+    std::cout << "\nResultados del algoritmo PMDLBit" << std::endl << "--------------------------------"
+              << std::endl;
 
     int tamannoMatriz;
     auto matrices = ingestaDeDatos(nombreArchivo, tamannoMatriz);
@@ -203,12 +220,14 @@ PMDLBit(const std::string &nombreArchivo) {
     int iteraciones = 0;
 
     while (std::accumulate(DLB.begin(), DLB.end(), 0) > 0 && iteraciones < 1000) {
+        // Bucle de recorrido
         for (int i = 0; i < tamannoMatriz; ++i) {
             // Si el bit DLB para el elemento i esta a 0, lo saltamos
             if (DLB[i] == 0) {
                 continue;
             }
 
+            // Bucle de intercambio
             bool mejora = false;
             for (int j = 0; j < tamannoMatriz; ++j) {
                 if (i == j) {  // No intercambiar el mismo elemento
@@ -228,7 +247,7 @@ PMDLBit(const std::string &nombreArchivo) {
                     std::fill(DLB.begin(), DLB.end(), 0);  // Resetear DLB
                     DLB[j] = 1;  // Establecer el bit del ultimo elemento intercambiado a 1
                     mejora = true;
-                    break;  // Salir del bucle de exploracion del vecindario
+                    break;  // Sale del bucle de exploracion del vecindario
                 }
             }
 
@@ -239,74 +258,113 @@ PMDLBit(const std::string &nombreArchivo) {
         }
     }
 
-    for (int i = 0; i < tamannoMatriz; i++) {
-        std::cout << mejor_solucion[i] << " ";
-    }
+    std::cout << "| Unidad >> Pos |" << std::endl;
+    std::cout << "|---------------|" << std::endl;
 
-    std::cout << std::endl << coste_mejor_solucion << std::endl;
+    for (int i = 0; i < tamannoMatriz; i++) {
+        std::cout << "|   " << std::setw(5) << i + 1
+                  << " >> " << std::setw(2) << mejor_solucion[i] + 1 << " |" << std::endl;
+    }
+    std::cout << "|---------------|" << std::endl;
 
     return {mejor_solucion, coste_mejor_solucion};
 }
 
-std::pair<std::vector<int>, int>
-PMDLBrandom(const std::vector<int> &solucion_inicial, const std::vector<std::vector<int>> &flujo,
-            const std::vector<std::vector<int>> &distancia, unsigned int semilla) {
-    size_t n = solucion_inicial.size();
+std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo) {
 
-    // Solucion actual y mejor solucion encontrada
-    std::vector<int> solucion_actual = solucion_inicial;
-    std::vector<int> mejor_solucion = solucion_inicial;
-    int coste_mejor_solucion = funcionObjetivo(mejor_solucion, flujo, distancia);
 
-    // Inicializar mascara DLB con todos los bits a 1
-    std::vector<int> DLB(n, 1);
+    std::cout << "\nResultados del algoritmo PMDLBitrandom" << std::endl << "--------------------------------"
+              << std::endl;
 
-    int iteraciones = 0;
+    int tamannoMatriz;
+    auto matrices = ingestaDeDatos(nombreArchivo, tamannoMatriz);
 
-    // Generador de numeros aleatorios con semilla
-    std::mt19937 generador(semilla);
+    std::vector<std::vector<int>> flujo = matrices.first;
+    std::vector<std::vector<int>> distancia = matrices.second;
 
-    while (std::accumulate(DLB.begin(), DLB.end(), 0) > 0 && iteraciones < 1000) {
-        // Elegir aleatoriamente una posicion con bit a 1 en DLB usando el generador con semilla
-        std::vector<int> indices_activos;
-        for (int idx = 0; idx < n; ++idx) {
-            if (DLB[idx] == 1) {
-                indices_activos.push_back(idx);
+    std::vector<int> solucion_inicial(tamannoMatriz);
+    for (int i = 0; i < tamannoMatriz; i++) {
+        solucion_inicial[i] = i;
+    }
+
+    std::vector<int> mejor_solucion_global = solucion_inicial;
+    int coste_mejor_solucion_global = INT_MAX;
+
+    if (semillas.empty()) {
+        semillas.push_back((int) std::random_device{}());
+    }
+
+    for (int semilla: semillas) {
+        std::mt19937 gen(semilla);
+
+        std::vector<int> solucion_actual = solucion_inicial;
+        std::vector<int> mejor_solucion = solucion_inicial;
+        int coste_mejor_solucion = funcionObjetivo(mejor_solucion, flujo, distancia);
+
+        // Inicializa la mascara DLB con todos los bits a 1
+        std::vector<int> DLB(tamannoMatriz, 1);
+
+        std::uniform_int_distribution<> dis(0, tamannoMatriz - 1);
+
+        int iteraciones = 0;
+        while (iteraciones < 1000) {
+            bool global_mejora = false;
+            int inicio = dis(gen);  // Genera un índice aleatorio como punto de inicio
+            for (int k = 0; k < tamannoMatriz; ++k) {
+                int i = (inicio + k) % tamannoMatriz;  // Calcula el índice actual de manera cíclica
+                if (DLB[i] == 0) {
+                    continue;
+                }
+
+                bool mejora = false;
+                for (int j = 0; j < tamannoMatriz; ++j) {
+                    if (i == j || DLB[j] == 0) {
+                        continue;
+                    }
+
+                    std::vector<int> solucion_vecina = intercambio(solucion_actual, i, j);
+                    int coste_vecina = funcionObjetivo(solucion_vecina, flujo, distancia);
+                    iteraciones++;
+
+                    if (coste_vecina < coste_mejor_solucion) {
+                        coste_mejor_solucion = coste_vecina;
+                        mejor_solucion = solucion_vecina;
+                        solucion_actual = solucion_vecina;
+                        std::fill(DLB.begin(), DLB.end(), 1);  // Resetear DLB
+                        DLB[j] = 0;  // Establecer el bit del último elemento intercambiado a 0
+                        mejora = true;
+                        global_mejora = true;
+                        break;  // Salir del bucle de exploración del vecindario
+                    }
+                }
+
+                if (!mejora) {
+                    DLB[i] = 0;
+                }
             }
+
+            if (!global_mejora) break;  // Si no se ha encontrado mejora global, finalizar
         }
-        std::uniform_int_distribution<int> distribucion(0, (int) indices_activos.size() - 1);
-        int i = indices_activos[distribucion(generador)];
 
-        bool mejora = false;
-        for (int j = 0; j < n; ++j) {
-            if (i == j) {  // No intercambiar el mismo elemento
-                continue;
-            }
+        std::cout << "\nCoste para semilla " << semilla << ": " << coste_mejor_solucion;
 
-            // Intercambiar elementos i y j
-            std::vector<int> solucion_vecina = intercambio(solucion_actual, i, j);
-            int coste_vecina = funcionObjetivo(solucion_vecina, flujo, distancia);
-            iteraciones++;
-
-            // Si la solucion vecina es mejor
-            if (coste_vecina < coste_mejor_solucion) {
-                coste_mejor_solucion = coste_vecina;
-                mejor_solucion = solucion_vecina;
-                solucion_actual = solucion_vecina;
-                std::fill(DLB.begin(), DLB.end(), 0);  // Resetear DLB
-                DLB[j] = 1;  // Establecer el bit del ultimo elemento intercambiado a 1
-                mejora = true;
-                break;  // Salir del bucle de exploracion del vecindario
-            }
-        }
-
-        // Si no se ha encontrado mejora para el elemento i, establecer su bit a 0 en DLB
-        if (!mejora) {
-            DLB[i] = 0;
+        if (coste_mejor_solucion < coste_mejor_solucion_global) {
+            mejor_solucion_global = mejor_solucion;
+            coste_mejor_solucion_global = coste_mejor_solucion;
         }
     }
 
-    return {mejor_solucion, coste_mejor_solucion};
+    std::cout << "\n\nMejor resultado global: " << coste_mejor_solucion_global << std::endl;
+
+    std::cout << "| Unidad >> Pos |" << std::endl;
+    std::cout << "|---------------|" << std::endl;
+    for (int i = 0; i < tamannoMatriz; i++) {
+        std::cout << "|   " << std::setw(5) << i + 1
+                  << " >> " << std::setw(2) << mejor_solucion_global[i] + 1 << " |" << std::endl;
+    }
+    std::cout << "|---------------|" << std::endl;
+
+    return {mejor_solucion_global, coste_mejor_solucion_global};
 }
 
 
