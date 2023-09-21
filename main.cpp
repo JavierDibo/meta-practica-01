@@ -9,10 +9,10 @@
 #include <random>
 #include <iomanip>
 
+void lecturaParametros(const std::string &nombreArchivo);
+
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>
 ingestaDeDatos(const std::string &nombreArchivo, int &tamannoMatriz);
-
-void lecturaParametros(const std::string &nombreArchivo);
 
 void algoritmoGreedy(std::string &nombreArchivo);
 
@@ -25,8 +25,6 @@ int funcionObjetivo(const std::vector<int> &p, const std::vector<std::vector<int
 
 std::vector<int> intercambio(const std::vector<int> &p, int r, int s);
 
-std::vector<int> semillas;
-
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         std::cerr << "main::Uso: " << argv[0] << " <nombre del archivoParametros de parametros>" << std::endl;
@@ -38,6 +36,68 @@ int main(int argc, char *argv[]) {
     lecturaParametros(archivoParametros);
 
     return 0;
+}
+
+std::vector<int> semillas;
+
+void lecturaParametros(const std::string &nombreArchivo) {
+
+    std::ifstream paramFile(nombreArchivo);
+    if (!paramFile.is_open()) {
+        std::cerr << "lecturaParametros::No se pudo abrir el archivo " << nombreArchivo << std::endl;
+        return;
+    }
+
+    std::map<std::string, std::string> parametros;
+
+    std::string line;
+    while (std::getline(paramFile, line)) {
+
+        if (!line.empty() && (line[0] == '#' || (line.size() >= 2 && line[0] == '/' && line[1] == '/'))) {
+            continue;
+        }
+
+        size_t pos = line.find('=');
+        if (pos != std::string::npos) {
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
+            key.erase(0, key.find_first_not_of(' '));
+            key.erase(key.find_last_not_of(' ') + 1);
+            value.erase(0, value.find_first_not_of(' '));
+            value.erase(value.find_last_not_of(' ') + 1);
+            parametros[key] = value;
+        }
+    }
+
+    paramFile.close();
+
+    if (parametros.find("semilla") != parametros.end()) {
+        std::string seeds_string = parametros["semilla"];
+        std::stringstream ss(seeds_string);
+        std::string seed;
+        while (std::getline(ss, seed, ',')) {
+            semillas.push_back(std::stoi(seed));
+        }
+    }
+
+    std::string archivoDatos = parametros["nombre_del_archivo"];
+
+    if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
+        algoritmoGreedy(archivoDatos);
+        return;
+    }
+
+    if (parametros["algoritmo"] == "bit" || parametros["algoritmo"] == "2") {
+        PMDLBit(archivoDatos);
+        return;
+    }
+
+    if (parametros["algoritmo"] == "bitr" || parametros["algoritmo"] == "3") {
+        PMDLBitrandom(archivoDatos);
+        return;
+    }
+
+    std::cout << "Archivo " << nombreArchivo << " leido correctamente. No se ha indicado ninguna funcion conocida";
 }
 
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>
@@ -73,54 +133,6 @@ ingestaDeDatos(const std::string &nombreArchivo, int &tamannoMatriz) {
     std::cout << "\nArchivo " << nombreArchivo << " procesado correctamente." << std::endl;
 
     return std::make_pair(flujo, distancias);
-}
-
-void lecturaParametros(const std::string &nombreArchivo) {
-
-    std::ifstream paramFile(nombreArchivo);
-    if (!paramFile.is_open()) {
-        std::cerr << "lecturaParametros::No se pudo abrir el archivo " << nombreArchivo << std::endl;
-        return;
-    }
-
-    std::map<std::string, std::string> parametros;
-
-    std::string line;
-    while (std::getline(paramFile, line)) {
-        size_t pos = line.find('=');
-        if (pos != std::string::npos) {
-            std::string key = line.substr(0, pos);
-            std::string value = line.substr(pos + 1);
-            key.erase(0, key.find_first_not_of(' '));
-            key.erase(key.find_last_not_of(' ') + 1);
-            value.erase(0, value.find_first_not_of(' '));
-            value.erase(value.find_last_not_of(' ') + 1);
-            parametros[key] = value;
-        }
-    }
-
-    paramFile.close();
-
-    if (parametros.find("semilla") != parametros.end()) {
-        std::string seeds_string = parametros["semilla"];
-        std::stringstream ss(seeds_string);
-        std::string seed;
-        while (std::getline(ss, seed, ',')) {
-            semillas.push_back(std::stoi(seed));
-        }
-    }
-
-    if (parametros["algoritmo"] == "greedy") {
-        algoritmoGreedy(parametros["nombre_del_archivo"]);
-    }
-
-    if (parametros["algoritmo"] == "bit") {
-        PMDLBit(parametros["nombre_del_archivo"]);
-    }
-
-    if (parametros["algoritmo"] == "bitr") {
-        PMDLBitrandom(parametros["nombre_del_archivo"]);
-    }
 }
 
 void algoritmoGreedy(std::string &nombreArchivo) {
