@@ -1,4 +1,4 @@
 nombre_del_archivo=datos/ford03.dat
 semilla=
-algoritmo=greedy
+algoritmo=bit
 otros_parametros=

@@ -16,9 +16,7 @@ void lecturaParametros(const std::string &nombreArchivo);
 
 void algoritmoGreedy(std::string &nombreArchivo);
 
-std::pair<std::vector<int>, int>
-PMDLBit(const std::vector<int> &solucion_inicial, const std::vector<std::vector<int>> &flujo,
-        const std::vector<std::vector<int>> &distancia);
+std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo);
 
 std::pair<std::vector<int>, int>
 PMDLBrandom(const std::vector<int> &solucion_inicial, const std::vector<std::vector<int>> &flujo,
@@ -40,8 +38,6 @@ int main(int argc, char *argv[]) {
     std::string archivoParametros = argv[1];
 
     lecturaParametros(archivoParametros);
-
-    test_PMDLBit();
 
     return 0;
 }
@@ -110,7 +106,7 @@ void lecturaParametros(const std::string &nombreArchivo) {
     }
 
     if (parametros["algoritmo"] == "bit") {
-        // PMDLBit(nombreArchivo,
+        PMDLBit(parametros["nombre_del_archivo"]);
     }
 }
 
@@ -183,9 +179,18 @@ std::vector<int> intercambio(const std::vector<int> &p, int r, int s) {
 }
 
 std::pair<std::vector<int>, int>
-PMDLBit(const std::vector<int> &solucion_inicial, const std::vector<std::vector<int>> &flujo,
-        const std::vector<std::vector<int>> &distancia) {
-    size_t n = solucion_inicial.size();
+PMDLBit(const std::string &nombreArchivo) {
+
+    int tamannoMatriz;
+    auto matrices = ingestaDeDatos(nombreArchivo, tamannoMatriz);
+
+    std::vector<std::vector<int>> flujo = matrices.first;
+    std::vector<std::vector<int>> distancia = matrices.second;
+
+    std::vector<int> solucion_inicial(tamannoMatriz);
+    for (int i = 0; i < tamannoMatriz; i++) {
+        solucion_inicial[i] = i;
+    }
 
     // Solucion actual y mejor solucion encontrada
     std::vector<int> solucion_actual = solucion_inicial;
@@ -193,19 +198,19 @@ PMDLBit(const std::vector<int> &solucion_inicial, const std::vector<std::vector<
     int coste_mejor_solucion = funcionObjetivo(mejor_solucion, flujo, distancia);
 
     // Inicializar mascara DLB con todos los bits a 1
-    std::vector<int> DLB(n, 1);
+    std::vector<int> DLB(tamannoMatriz, 1);
 
     int iteraciones = 0;
 
     while (std::accumulate(DLB.begin(), DLB.end(), 0) > 0 && iteraciones < 1000) {
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < tamannoMatriz; ++i) {
             // Si el bit DLB para el elemento i esta a 0, lo saltamos
             if (DLB[i] == 0) {
                 continue;
             }
 
             bool mejora = false;
-            for (int j = 0; j < n; ++j) {
+            for (int j = 0; j < tamannoMatriz; ++j) {
                 if (i == j) {  // No intercambiar el mismo elemento
                     continue;
                 }
@@ -233,6 +238,12 @@ PMDLBit(const std::vector<int> &solucion_inicial, const std::vector<std::vector<
             }
         }
     }
+
+    for (int i = 0; i < tamannoMatriz; i++) {
+        std::cout << mejor_solucion[i] << " ";
+    }
+
+    std::cout << std::endl << coste_mejor_solucion << std::endl;
 
     return {mejor_solucion, coste_mejor_solucion};
 }
@@ -296,43 +307,6 @@ PMDLBrandom(const std::vector<int> &solucion_inicial, const std::vector<std::vec
     }
 
     return {mejor_solucion, coste_mejor_solucion};
-}
-
-void test_PMDLBit() {
-    // 1. Generar datos de prueba
-    std::vector<std::vector<int>> flujo = {
-            {0, 3, 8, 3},
-            {3, 0, 2, 4},
-            {8, 2, 0, 5},
-            {3, 4, 5, 0}
-    };
-
-    std::vector<std::vector<int>> distancia = {
-            {0,  12, 6, 4},
-            {12, 0,  6, 8},
-            {6,  6,  0, 7},
-            {4,  8,  7, 0}
-    };
-
-    // 2. Generar solucion inicial
-    std::vector<int> solucion_inicial = {0, 1, 2,
-                                         3};  // Esta es una solucion inicial simple (identidad). Puede generarse aleatoriamente si se prefiere.
-
-    // 3. Invocar PMDLBit
-    auto resultado = PMDLBit(solucion_inicial, flujo, distancia);
-
-    // 4. Mostrar los resultados
-    std::cout << "Solucion inicial: ";
-    for (int val: solucion_inicial) {
-        std::cout << val << " ";
-    }
-    std::cout << "\nCoste de la solucion inicial: " << funcionObjetivo(solucion_inicial, flujo, distancia) << std::endl;
-
-    std::cout << "\nMejor solucion encontrada: ";
-    for (int val: resultado.first) {
-        std::cout << val << " ";
-    }
-    std::cout << "\nCoste de la mejor solucion: " << resultado.second << std::endl;
 }
 
 
