@@ -1,4 +1,4 @@
-nombre_del_archivo=datos/ford05.dat
+nombre_del_archivo=datos/ford03.dat
 semilla=
 algoritmo=greedy
-otros_parametros=ingesta
+otros_parametros=
