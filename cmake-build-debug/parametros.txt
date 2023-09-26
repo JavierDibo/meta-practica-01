@@ -1,8 +1,8 @@
 nombre_del_archivo=datos/ford01.dat
 
 # Uso: semilla=1 -- semilla=3293,423,4166 -- semilla= -- etc
-semilla=32131
+semilla=1,2,5,7,8
 
 # Algoritmos implementados: greedy || 1 || bit || 2 || bitr || 3
 # algoritmo=1 -- algoritmo=bit -- etc
-algoritmo=2
+algoritmo=3

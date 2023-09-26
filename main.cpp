@@ -239,7 +239,7 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
     // Solucion "estandar"
     std::vector<int> solucion_inicial(tamanno_matriz);
     for (int i = 0; i < tamanno_matriz; i++) {
-        solucion_inicial[i] = i;
+        solucion_inicial[i] = tamanno_matriz-i-1;
     }
 
     // Solucion actual y mejor solucion encontrada
@@ -260,14 +260,13 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
     }
 
     // Randomiza la lista de indices
-    int indiceSemilla = 0;
-    std::default_random_engine rng(semillas[indiceSemilla]);
+    std::default_random_engine rng(semillas[0]);
     std::shuffle(indices.begin(), indices.end(), rng);
 
     // Mientras haya cosas que bsucar y no se hayan superado las iteraciones
     while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
         // Bucle de recorrido con indices aleatorios
-        for (int index : indices) {
+        for (int index: indices) {
             int i = index;
 
             // Si el bit DLB para el elemento i esta a 1, lo saltamos
@@ -277,18 +276,14 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
 
             // Bucle de intercambio
             bool mejora = false;
-            for (int j = i+1; j < tamanno_matriz; ++j) {
-                if (i == j) {
-                    continue;
-                }
+            for (int j = i + 1; j < tamanno_matriz; ++j) {
 
                 int delta = delta_coste(solucion_actual, flujo, distancia, i, j);
-                iteraciones++;
 
-                if (delta < 0) {  // Si el intercambio mejora el coste
+                if (delta < 0) {  // Si el intercambio mejora el coste;
                     std::swap(solucion_actual[i], solucion_actual[j]);
+                    iteraciones++;
                     coste_actual += delta;
-                    std::fill(DLB.begin(), DLB.end(), 0);  // Resetear DLB
                     DLB[j] = 0;  // Establecer el bit del ultimo elemento intercambiado a 0
                     mejora = true;
                     if (coste_actual < coste_mejor_solucion) {
@@ -373,12 +368,12 @@ std::pair<std::vector<int>, int> PrimeroMejorDBLRandom(const std::string &nombre
 
                     std::vector<int> solucion_vecina = intercambio(solucion_actual, i, j);
                     int coste_vecina = funcion_objetivo(solucion_vecina, flujo, distancia);
-                    iteraciones++;
 
                     if (coste_vecina < coste_mejor_solucion) {
                         coste_mejor_solucion = coste_vecina;
                         mejor_solucion = solucion_vecina;
                         solucion_actual = solucion_vecina;
+                        iteraciones++;
                         std::fill(DLB.begin(), DLB.end(), 1);  // Resetear DLB
                         DLB[j] = 0;  // Establecer el bit del ultimo elemento intercambiado a 0
                         mejora = true;
