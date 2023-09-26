@@ -5,4 +5,4 @@ semilla=
 
 # Algoritmos implementados: greedy || 1 || bit || 2 || bitr || 3
 # algoritmo=1 -- algoritmo=bit -- etc
-algoritmo=3
+algoritmo=2

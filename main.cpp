@@ -245,7 +245,8 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
     // Solucion actual y mejor solucion encontrada
     std::vector<int> solucion_actual = solucion_inicial;
     std::vector<int> mejor_solucion = solucion_inicial;
-    int coste_mejor_solucion = funcion_objetivo(mejor_solucion, flujo, distancia);
+    int coste_actual = funcion_objetivo(solucion_actual, flujo, distancia);
+    int coste_mejor_solucion = coste_actual;
 
     // Inicializar mascara DLB con todos los bits a 1
     std::vector<int> DLB(tamanno_matriz, 1);
@@ -263,34 +264,34 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
             // Bucle de intercambio
             bool mejora = false;
             for (int j = 0; j < tamanno_matriz; ++j) {
-                if (i == j) {  // No intercambiar el mismo elemento
+                if (i == j) {
                     continue;
                 }
 
-                // Intercambiar elementos i y j
-                std::vector<int> solucion_vecina = intercambio(solucion_actual, i, j);
-                int coste_vecina = funcion_objetivo(solucion_vecina, flujo, distancia);
+                int delta = delta_coste(solucion_actual, flujo, distancia, i, j);
                 iteraciones++;
 
-                // Si la solucion vecina es mejor
-                if (coste_vecina < coste_mejor_solucion) {
-                    coste_mejor_solucion = coste_vecina;
-                    mejor_solucion = solucion_vecina;
-                    solucion_actual = solucion_vecina;
-                    std::fill(DLB.begin(), DLB.end(), 0);  // Resetear DLB
-                    DLB[j] = 1;  // Establecer el bit del ultimo elemento intercambiado a 1
+                if (delta < 0) {  // Si el intercambio mejora el coste
+                    std::swap(solucion_actual[i], solucion_actual[j]);
+                    coste_actual += delta;
+                    std::fill(DLB.begin(), DLB.end(), 1);  // Resetear DLB
+                    DLB[j] = 1;  // Establecer el bit del último elemento intercambiado a 1
                     mejora = true;
-                    break;  // Sale del bucle de exploracion del vecindario
+                    if (coste_actual < coste_mejor_solucion) {
+                        mejor_solucion = solucion_actual;
+                        coste_mejor_solucion = coste_actual;
+                    }
+                    break;  // Salir del bucle de exploración del vecindario
                 }
             }
 
-            // Si no se ha encontrado mejora para el elemento i, establecer su bit a 0 en DLB
             if (!mejora) {
                 DLB[i] = 0;
             }
         }
     }
 
+    std::cout << "\nCoste de la mejor solucion: " << coste_mejor_solucion << std::endl;
     std::cout << "| Unidad >> Pos |" << std::endl;
     std::cout << "|---------------|" << std::endl;
 
