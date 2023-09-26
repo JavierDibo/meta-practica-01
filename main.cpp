@@ -9,19 +9,24 @@
 #include <random>
 #include <iomanip>
 
-void lecturaParametros(const std::string &nombreArchivo);
+// Variables globales
+
+std::vector<int> semillas;
+
+// Funciones
+void lecturaParametros(const std::string &nombre_archivo);
 
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>
-ingestaDeDatos(const std::string &nombreArchivo, int &tamannoMatriz);
+ingestaDeDatos(const std::string &nombre_archivo, int &tamanno_matriz);
 
 void algoritmoGreedy(std::string &nombreArchivo);
 
-std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo);
+std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archivo);
 
-std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo);
+std::pair<std::vector<int>, int> PrimeroMejorDBLRandom(const std::string &nombre_archivo);
 
-int funcionObjetivo(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
-                    const std::vector<std::vector<int>> &distancia);
+int funcion_objetivo(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
+                     const std::vector<std::vector<int>> &distancia);
 
 std::vector<int> intercambio(const std::vector<int> &p, int r, int s);
 
@@ -38,13 +43,11 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-std::vector<int> semillas;
+void lecturaParametros(const std::string &nombre_archivo) {
 
-void lecturaParametros(const std::string &nombreArchivo) {
-
-    std::ifstream paramFile(nombreArchivo);
+    std::ifstream paramFile(nombre_archivo);
     if (!paramFile.is_open()) {
-        std::cerr << "lecturaParametros::No se pudo abrir el archivo " << nombreArchivo << std::endl;
+        std::cerr << "lecturaParametros::No se pudo abrir el archivo " << nombre_archivo << std::endl;
         return;
     }
 
@@ -80,57 +83,57 @@ void lecturaParametros(const std::string &nombreArchivo) {
         }
     }
 
-    std::string archivoDatos = parametros["nombre_del_archivo"];
+    std::string archivo_datos = parametros["nombre_del_archivo"];
 
     if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
-        algoritmoGreedy(archivoDatos);
+        algoritmoGreedy(archivo_datos);
         return;
     }
 
     if (parametros["algoritmo"] == "bit" || parametros["algoritmo"] == "2") {
-        PMDLBit(archivoDatos);
+        PrimeroMejorDLB(archivo_datos);
         return;
     }
 
     if (parametros["algoritmo"] == "bitr" || parametros["algoritmo"] == "3") {
-        PMDLBitrandom(archivoDatos);
+        PrimeroMejorDBLRandom(archivo_datos);
         return;
     }
 
-    std::cout << "Archivo " << nombreArchivo << " leido correctamente. No se ha indicado ninguna funcion conocida";
+    std::cout << "Archivo " << nombre_archivo << " leido correctamente. No se ha indicado ninguna funcion conocida";
 }
 
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>
-ingestaDeDatos(const std::string &nombreArchivo, int &tamannoMatriz) {
-    std::ifstream archivo(nombreArchivo);
+ingestaDeDatos(const std::string &nombre_archivo, int &tamanno_matriz) {
+    std::ifstream archivo(nombre_archivo);
     if (!archivo.is_open()) {
-        std::cerr << "ingestaDeDatos::No se pudo abrir el archivo " << nombreArchivo << std::endl;
+        std::cerr << "ingestaDeDatos::No se pudo abrir el archivo " << nombre_archivo << std::endl;
         return std::make_pair(std::vector<std::vector<int>>(), std::vector<std::vector<int>>());
     }
 
-    archivo >> tamannoMatriz;
+    archivo >> tamanno_matriz;
     archivo.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    std::vector<std::vector<int>> flujo(tamannoMatriz, std::vector<int>(tamannoMatriz));
-    std::vector<std::vector<int>> distancias(tamannoMatriz, std::vector<int>(tamannoMatriz));
+    std::vector<std::vector<int>> flujo(tamanno_matriz, std::vector<int>(tamanno_matriz));
+    std::vector<std::vector<int>> distancias(tamanno_matriz, std::vector<int>(tamanno_matriz));
 
-    for (int i = 0; i < tamannoMatriz; ++i) {
-        for (int j = 0; j < tamannoMatriz; ++j) {
+    for (int i = 0; i < tamanno_matriz; ++i) {
+        for (int j = 0; j < tamanno_matriz; ++j) {
             archivo >> flujo[i][j];
         }
     }
 
     archivo.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    for (int i = 0; i < tamannoMatriz; ++i) {
-        for (int j = 0; j < tamannoMatriz; ++j) {
+    for (int i = 0; i < tamanno_matriz; ++i) {
+        for (int j = 0; j < tamanno_matriz; ++j) {
             archivo >> distancias[i][j];
         }
     }
 
     archivo.close();
 
-    std::cout << "\nArchivo " << nombreArchivo << " procesado correctamente." << std::endl;
+    std::cout << "\nArchivo " << nombre_archivo << " procesado correctamente." << std::endl;
 
     return std::make_pair(flujo, distancias);
 }
@@ -140,54 +143,54 @@ void algoritmoGreedy(std::string &nombreArchivo) {
     std::cout << "\nResultados del algoritmo Greedy" << std::endl << "---------------------------------"
               << std::endl;
 
-    int tamannoMatriz;
-    auto matrices = ingestaDeDatos(nombreArchivo, tamannoMatriz);
+    int tamanno_matriz;
+    auto matrices = ingestaDeDatos(nombreArchivo, tamanno_matriz);
     auto flujo = matrices.first;
     auto distancias = matrices.second;
 
-    std::vector<int> sumatorioFlujos(tamannoMatriz, 0);
-    std::vector<int> sumatorioDistancias(tamannoMatriz, 0);
+    std::vector<int> sumatorio_flujos(tamanno_matriz, 0);
+    std::vector<int> sumatorio_distancias(tamanno_matriz, 0);
 
-    for (int i = 0; i < tamannoMatriz; ++i) {
-        for (int j = 0; j < tamannoMatriz; ++j) {
-            sumatorioFlujos[i] += flujo[i][j];
-            sumatorioDistancias[i] += distancias[i][j];
+    for (int i = 0; i < tamanno_matriz; ++i) {
+        for (int j = 0; j < tamanno_matriz; ++j) {
+            sumatorio_flujos[i] += flujo[i][j];
+            sumatorio_distancias[i] += distancias[i][j];
         }
     }
 
-    auto funcionOrdenar = [](const std::vector<int> &sumas, bool descending = false) {
-        std::vector<std::pair<int, int>> sumasIndizadas;
+    auto funcion_ordenar = [](const std::vector<int> &sumas, bool descending = false) {
+        std::vector<std::pair<int, int>> sumas_indizadas;
         for (int i = 0; i < sumas.size(); i++) {
-            sumasIndizadas.emplace_back(sumas[i], i);
+            sumas_indizadas.emplace_back(sumas[i], i);
         }
         if (descending) {
-            std::sort(sumasIndizadas.begin(), sumasIndizadas.end(),
+            std::sort(sumas_indizadas.begin(), sumas_indizadas.end(),
                       [](const std::pair<int, int> &a, const std::pair<int, int> &b) {
                           return a.first > b.first;
                       });
         } else {
-            std::sort(sumasIndizadas.begin(), sumasIndizadas.end());
+            std::sort(sumas_indizadas.begin(), sumas_indizadas.end());
         }
-        return sumasIndizadas;
+        return sumas_indizadas;
     };
 
-    auto flujosIndizados = funcionOrdenar(sumatorioFlujos);
-    auto distanciasIndizadas = funcionOrdenar(sumatorioDistancias, true);
+    auto flujos_indizados = funcion_ordenar(sumatorio_flujos);
+    auto distancias_indizadas = funcion_ordenar(sumatorio_distancias, true);
 
     std::cout << "| Unidad >> Pos | Flujo | Dist |" << std::endl;
     std::cout << "|---------------|-------|------|" << std::endl;
 
-    for (int i = 0; i < flujosIndizados.size(); i++) {
-        std::cout << "| " << std::setw(6) << flujosIndizados[i].second + 1
-                  << " >> " << std::setw(3) << distanciasIndizadas[i].second + 1
-                  << " | " << std::setw(5) << flujosIndizados[i].first
-                  << " | " << std::setw(4) << distanciasIndizadas[i].first << " |" << std::endl;
+    for (int i = 0; i < flujos_indizados.size(); i++) {
+        std::cout << "| " << std::setw(6) << flujos_indizados[i].second + 1
+                  << " >> " << std::setw(3) << distancias_indizadas[i].second + 1
+                  << " | " << std::setw(5) << flujos_indizados[i].first
+                  << " | " << std::setw(4) << distancias_indizadas[i].first << " |" << std::endl;
     }
     std::cout << "|------------------------------|" << std::endl;
 }
 
-int funcionObjetivo(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
-                    const std::vector<std::vector<int>> &distancia) {
+int funcion_objetivo(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
+                     const std::vector<std::vector<int>> &distancia) {
     size_t n = p.size();
     int coste = 0;
 
@@ -199,41 +202,59 @@ int funcionObjetivo(const std::vector<int> &p, const std::vector<std::vector<int
     return coste;
 }
 
+int delta_coste(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
+                const std::vector<std::vector<int>> &distancia, int r, int s) {
+    size_t n = p.size();
+    int delta = 0;
+
+    for (int k = 0; k < n; ++k) {
+        if (k != r && k != s) {
+            delta += flujo[r][k] * (distancia[p[s]][p[k]] - distancia[p[r]][p[k]])
+                     + flujo[s][k] * (distancia[p[r]][p[k]] - distancia[p[s]][p[k]])
+                     + flujo[k][r] * (distancia[p[k]][p[s]] - distancia[p[k]][p[r]])
+                     + flujo[k][s] * (distancia[p[k]][p[r]] - distancia[p[k]][p[s]]);
+        }
+    }
+    return delta;
+}
+
+
 std::vector<int> intercambio(const std::vector<int> &p, int r, int s) {
     std::vector<int> p_copia = p;
     std::swap(p_copia[r], p_copia[s]);
     return p_copia;
 }
 
-std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo) {
+std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archivo) {
 
-    std::cout << "\nResultados del algoritmo PMDLBit" << std::endl << "--------------------------------"
+    std::cout << "\nResultados del algoritmo PrimeroMejorDLB" << std::endl << "--------------------------------"
               << std::endl;
 
-    int tamannoMatriz;
-    auto matrices = ingestaDeDatos(nombreArchivo, tamannoMatriz);
+    int tamanno_matriz;
+    auto matrices = ingestaDeDatos(nombre_archivo, tamanno_matriz);
 
     std::vector<std::vector<int>> flujo = matrices.first;
     std::vector<std::vector<int>> distancia = matrices.second;
 
-    std::vector<int> solucion_inicial(tamannoMatriz);
-    for (int i = 0; i < tamannoMatriz; i++) {
+    // Solucion "estandar"
+    std::vector<int> solucion_inicial(tamanno_matriz);
+    for (int i = 0; i < tamanno_matriz; i++) {
         solucion_inicial[i] = i;
     }
 
     // Solucion actual y mejor solucion encontrada
     std::vector<int> solucion_actual = solucion_inicial;
     std::vector<int> mejor_solucion = solucion_inicial;
-    int coste_mejor_solucion = funcionObjetivo(mejor_solucion, flujo, distancia);
+    int coste_mejor_solucion = funcion_objetivo(mejor_solucion, flujo, distancia);
 
     // Inicializar mascara DLB con todos los bits a 1
-    std::vector<int> DLB(tamannoMatriz, 1);
+    std::vector<int> DLB(tamanno_matriz, 1);
 
     int iteraciones = 0;
 
     while (std::accumulate(DLB.begin(), DLB.end(), 0) > 0 && iteraciones < 1000) {
         // Bucle de recorrido
-        for (int i = 0; i < tamannoMatriz; ++i) {
+        for (int i = 0; i < tamanno_matriz; ++i) {
             // Si el bit DLB para el elemento i esta a 0, lo saltamos
             if (DLB[i] == 0) {
                 continue;
@@ -241,14 +262,14 @@ std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo) {
 
             // Bucle de intercambio
             bool mejora = false;
-            for (int j = 0; j < tamannoMatriz; ++j) {
+            for (int j = 0; j < tamanno_matriz; ++j) {
                 if (i == j) {  // No intercambiar el mismo elemento
                     continue;
                 }
 
                 // Intercambiar elementos i y j
                 std::vector<int> solucion_vecina = intercambio(solucion_actual, i, j);
-                int coste_vecina = funcionObjetivo(solucion_vecina, flujo, distancia);
+                int coste_vecina = funcion_objetivo(solucion_vecina, flujo, distancia);
                 iteraciones++;
 
                 // Si la solucion vecina es mejor
@@ -273,7 +294,7 @@ std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo) {
     std::cout << "| Unidad >> Pos |" << std::endl;
     std::cout << "|---------------|" << std::endl;
 
-    for (int i = 0; i < tamannoMatriz; i++) {
+    for (int i = 0; i < tamanno_matriz; i++) {
         std::cout << "|   " << std::setw(5) << i + 1
                   << " >> " << std::setw(2) << mejor_solucion[i] + 1 << " |" << std::endl;
     }
@@ -282,20 +303,20 @@ std::pair<std::vector<int>, int> PMDLBit(const std::string &nombreArchivo) {
     return {mejor_solucion, coste_mejor_solucion};
 }
 
-std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo) {
+std::pair<std::vector<int>, int> PrimeroMejorDBLRandom(const std::string &nombre_archivo) {
 
 
-    std::cout << "\nResultados del algoritmo PMDLBitrandom" << std::endl << "--------------------------------"
+    std::cout << "\nResultados del algoritmo PrimeroMejorDBLRandom" << std::endl << "--------------------------------"
               << std::endl;
 
-    int tamannoMatriz;
-    auto matrices = ingestaDeDatos(nombreArchivo, tamannoMatriz);
+    int tamanno_matriz;
+    auto matrices = ingestaDeDatos(nombre_archivo, tamanno_matriz);
 
     std::vector<std::vector<int>> flujo = matrices.first;
     std::vector<std::vector<int>> distancia = matrices.second;
 
-    std::vector<int> solucion_inicial(tamannoMatriz);
-    for (int i = 0; i < tamannoMatriz; i++) {
+    std::vector<int> solucion_inicial(tamanno_matriz);
+    for (int i = 0; i < tamanno_matriz; i++) {
         solucion_inicial[i] = i;
     }
 
@@ -311,31 +332,31 @@ std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo)
 
         std::vector<int> solucion_actual = solucion_inicial;
         std::vector<int> mejor_solucion = solucion_inicial;
-        int coste_mejor_solucion = funcionObjetivo(mejor_solucion, flujo, distancia);
+        int coste_mejor_solucion = funcion_objetivo(mejor_solucion, flujo, distancia);
 
         // Inicializa la mascara DLB con todos los bits a 1
-        std::vector<int> DLB(tamannoMatriz, 1);
+        std::vector<int> DLB(tamanno_matriz, 1);
 
-        std::uniform_int_distribution<> dis(0, tamannoMatriz - 1);
+        std::uniform_int_distribution<> dis(0, tamanno_matriz - 1);
 
         int iteraciones = 0;
         while (iteraciones < 1000) {
             bool global_mejora = false;
             int inicio = dis(gen);  // Genera un índice aleatorio como punto de inicio
-            for (int k = 0; k < tamannoMatriz; ++k) {
-                int i = (inicio + k) % tamannoMatriz;  // Calcula el índice actual de manera cíclica
+            for (int k = 0; k < tamanno_matriz; ++k) {
+                int i = (inicio + k) % tamanno_matriz;  // Calcula el índice actual de manera cíclica
                 if (DLB[i] == 0) {
                     continue;
                 }
 
                 bool mejora = false;
-                for (int j = 0; j < tamannoMatriz; ++j) {
+                for (int j = 0; j < tamanno_matriz; ++j) {
                     if (i == j || DLB[j] == 0) {
                         continue;
                     }
 
                     std::vector<int> solucion_vecina = intercambio(solucion_actual, i, j);
-                    int coste_vecina = funcionObjetivo(solucion_vecina, flujo, distancia);
+                    int coste_vecina = funcion_objetivo(solucion_vecina, flujo, distancia);
                     iteraciones++;
 
                     if (coste_vecina < coste_mejor_solucion) {
@@ -357,6 +378,7 @@ std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo)
 
             if (!global_mejora) break;  // Si no se ha encontrado mejora global, finalizar
         }
+        std::cout << "\n\nNumero de iteraciones: " << iteraciones << std::endl;
 
         std::cout << "\nCoste para semilla " << semilla << ": " << coste_mejor_solucion;
 
@@ -370,7 +392,7 @@ std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo)
 
     std::cout << "| Unidad >> Pos |" << std::endl;
     std::cout << "|---------------|" << std::endl;
-    for (int i = 0; i < tamannoMatriz; i++) {
+    for (int i = 0; i < tamanno_matriz; i++) {
         std::cout << "|   " << std::setw(5) << i + 1
                   << " >> " << std::setw(2) << mejor_solucion_global[i] + 1 << " |" << std::endl;
     }
@@ -378,5 +400,3 @@ std::pair<std::vector<int>, int> PMDLBitrandom(const std::string &nombreArchivo)
 
     return {mejor_solucion_global, coste_mejor_solucion_global};
 }
-
-
