@@ -13,7 +13,8 @@
 // Variables globales
 
 std::vector<int> semillas;
-bool echo;
+bool echo = false;
+bool hacer_log = false;
 
 // Funciones
 void lecturaParametros(const std::string &nombre_archivo);
@@ -59,6 +60,8 @@ int main(int argc, char *argv[]) {
 
 std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archivo) {
 
+    std::cout << "Algoritmo Primero el Mejor (DLB): " << std::endl;
+
     auto start_time = std::chrono::high_resolution_clock::now();
 
     int tamanno_matriz;
@@ -92,7 +95,9 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
         std::default_random_engine random(semilla);
         std::shuffle(indices.begin(), indices.end(), random);
 
-        std::ofstream log_file = inicializarLog(semilla, nombre_archivo);
+        std::ofstream log_file;
+        if (hacer_log)
+            log_file = inicializarLog(semilla, nombre_archivo);
 
         while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
             for (int index: indices) {
@@ -131,9 +136,12 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
             }
         }
 
-        log_file.close();
-        if (echo)
+        if (hacer_log)
+            log_file.close();
+
+        if (echo) {
             imprimirResumenSemilla(semilla, iteraciones, coste_actual);
+        }
     }
 
     if (echo)
@@ -144,10 +152,6 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
     std::cout << "Tiempo de ejecucion: " << elapsed.count() << " segundos." << std::endl;
 
     return {mejor_solucion, coste_mejor_solucion};
-}
-
-void escribirLog(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta) {
-    archivo_log << iteraciones << "," << i << "," << j << "," << coste_actual << "," << delta << "\n";
 }
 
 void lecturaParametros(const std::string &nombre_archivo) {
@@ -191,6 +195,10 @@ void lecturaParametros(const std::string &nombre_archivo) {
 
     if (parametros.find("echo") != parametros.end()) {
         echo = (parametros["echo"] == "true");
+    }
+
+    if (parametros.find("log") != parametros.end()) {
+        hacer_log = (parametros["log"] == "true");
     }
 
     std::string archivo_datos = parametros["nombre_del_archivo"];
@@ -381,6 +389,11 @@ std::ofstream inicializarLog(const int semilla, const std::string &nombre_archiv
     }
 
     return archivo_log;
+}
+
+void escribirLog(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta) {
+    if (hacer_log)
+        archivo_log << "," << iteraciones << "," << i << "," << j << "," << coste_actual << "," << delta << "\n";
 }
 
 std::pair<std::vector<int>, int> PMDLBprueba(const std::string &nombre_archivo) {

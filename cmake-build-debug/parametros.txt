@@ -9,3 +9,6 @@ algoritmo=2
 
 # Imprimir por consola
 echo=false
+
+# Crear archivos log
+log=false
