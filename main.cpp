@@ -17,55 +17,51 @@ bool echo = false;
 bool hacer_log = false;
 
 // Funciones
-void lecturaParametros(const std::string &nombre_archivo);
+void lectura_parametros(const std::string &nombre_archivo);
 
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>
-ingestaDeDatos(const std::string &nombre_archivo, int &tamanno_matriz);
+ingesta_datos(const std::string &nombre_archivo, int &tamanno_matriz);
 
-void algoritmoGreedy(std::string &nombreArchivo);
+void algoritmo_greedy(std::string &nombre_archivo);
 
-std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archivo);
+std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_archivo);
 
-std::pair<std::vector<int>, int> PMDLBprueba(const std::string &nombre_archivo);
-
-int funcion_objetivo(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
+int funcion_objetivo(const std::vector<int> &vec, const std::vector<std::vector<int>> &flujo,
                      const std::vector<std::vector<int>> &distancia);
 
-std::vector<int> intercambio(const std::vector<int> &p, int r, int s);
+void escribir_log(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta);
 
-void escribirLog(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta);
+std::ofstream inicializar_log(int semilla, const std::string &nombre_archivo);
 
-std::ofstream inicializarLog(const int semilla, const std::string &nombre_archivo);
-
-int delta_coste(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
+int delta_coste(const std::vector<int> &vec, const std::vector<std::vector<int>> &flujo,
                 const std::vector<std::vector<int>> &distancia, int r, int s);
 
-void imprimirResumenSemilla(int semilla, int iteraciones, int coste_actual);
+void imprimir_resumen_semilla(int semilla, int iteraciones, int coste_actual);
 
-void imprimirResumenGlobal(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
-                           const std::vector<int> &mejor_solucion);
+void imprimir_resumen_global(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
+                             const std::vector<int> &mejor_solucion);
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        std::cerr << "main::Uso: " << argv[0] << " <nombre del archivoParametros de parametros>" << std::endl;
+        std::cerr << "Uso: " << argv[0] << " <nombre del archivo de parametros>" << std::endl;
         return 1;
     }
 
-    std::string archivoParametros = argv[1];
+    std::string archivo_parametros = argv[1];
 
-    lecturaParametros(archivoParametros);
+    lectura_parametros(archivo_parametros);
 
     return 0;
 }
 
-std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archivo) {
+std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_archivo) {
 
     std::cout << "Algoritmo Primero el Mejor (DLB): " << std::endl;
 
-    auto start_time = std::chrono::high_resolution_clock::now();
+    auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
     int tamanno_matriz;
-    auto matrices = ingestaDeDatos(nombre_archivo, tamanno_matriz);
+    auto matrices = ingesta_datos(nombre_archivo, tamanno_matriz);
 
     std::vector<std::vector<int>> flujo = matrices.first;
     std::vector<std::vector<int>> distancia = matrices.second;
@@ -97,7 +93,7 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
 
         std::ofstream log_file;
         if (hacer_log)
-            log_file = inicializarLog(semilla, nombre_archivo);
+            log_file = inicializar_log(semilla, nombre_archivo);
 
         while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
             for (int index: indices) {
@@ -118,7 +114,7 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
                         DLB[j] = 0;
                         mejora = true;
 
-                        escribirLog(log_file, iteraciones, i, j, coste_actual, delta);
+                        escribir_log(log_file, iteraciones, i, j, coste_actual, delta);
 
                         if (coste_actual < coste_mejor_solucion) {
                             mejor_solucion = solucion_actual;
@@ -140,32 +136,32 @@ std::pair<std::vector<int>, int> PrimeroMejorDLB(const std::string &nombre_archi
             log_file.close();
 
         if (echo) {
-            imprimirResumenSemilla(semilla, iteraciones, coste_actual);
+            imprimir_resumen_semilla(semilla, iteraciones, coste_actual);
         }
     }
 
     if (echo)
-        imprimirResumenGlobal(coste_mejor_solucion, mejor_semilla, mejor_iteraciones, mejor_solucion);
+        imprimir_resumen_global(coste_mejor_solucion, mejor_semilla, mejor_iteraciones, mejor_solucion);
 
-    auto end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end_time - start_time;
-    std::cout << "Tiempo de ejecucion: " << elapsed.count() << " segundos." << std::endl;
+    auto tiempo_fin = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+    std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
 
     return {mejor_solucion, coste_mejor_solucion};
 }
 
-void lecturaParametros(const std::string &nombre_archivo) {
+void lectura_parametros(const std::string &nombre_archivo) {
 
-    std::ifstream paramFile(nombre_archivo);
-    if (!paramFile.is_open()) {
-        std::cerr << "lecturaParametros::No se pudo abrir el archivo " << nombre_archivo << std::endl;
+    std::ifstream archivo_parametros(nombre_archivo);
+    if (!archivo_parametros.is_open()) {
+        std::cerr << "lectura_parametros::No se pudo abrir el archivo " << nombre_archivo << std::endl;
         return;
     }
 
     std::map<std::string, std::string> parametros;
 
     std::string line;
-    while (std::getline(paramFile, line)) {
+    while (std::getline(archivo_parametros, line)) {
         if (!line.empty() && (line[0] == '#' || (line.size() >= 2 && line[0] == '/' && line[1] == '/'))) {
             continue;
         }
@@ -182,7 +178,7 @@ void lecturaParametros(const std::string &nombre_archivo) {
         }
     }
 
-    paramFile.close();
+    archivo_parametros.close();
 
     if (parametros.find("semilla") != parametros.end()) {
         std::string seeds_string = parametros["semilla"];
@@ -204,17 +200,12 @@ void lecturaParametros(const std::string &nombre_archivo) {
     std::string archivo_datos = parametros["nombre_del_archivo"];
 
     if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
-        algoritmoGreedy(archivo_datos);
+        algoritmo_greedy(archivo_datos);
         return;
     }
 
-    if (parametros["algoritmo"] == "bit" || parametros["algoritmo"] == "2") {
-        PrimeroMejorDLB(archivo_datos);
-        return;
-    }
-
-    if (parametros["algoritmo"] == "bitr" || parametros["algoritmo"] == "3") {
-        PMDLBprueba(archivo_datos);
+    if (parametros["algoritmo"] == "pm" || parametros["algoritmo"] == "2") {
+        primero_mejor_DLB(archivo_datos);
         return;
     }
 
@@ -222,10 +213,10 @@ void lecturaParametros(const std::string &nombre_archivo) {
 }
 
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>
-ingestaDeDatos(const std::string &nombre_archivo, int &tamanno_matriz) {
+ingesta_datos(const std::string &nombre_archivo, int &tamanno_matriz) {
     std::ifstream archivo(nombre_archivo);
     if (!archivo.is_open()) {
-        std::cerr << "ingestaDeDatos::No se pudo abrir el archivo " << nombre_archivo << std::endl;
+        std::cerr << "ingesta_datos::No se pudo abrir el archivo " << nombre_archivo << std::endl;
         return std::make_pair(std::vector<std::vector<int>>(), std::vector<std::vector<int>>());
     }
 
@@ -257,13 +248,15 @@ ingestaDeDatos(const std::string &nombre_archivo, int &tamanno_matriz) {
     return std::make_pair(flujo, distancias);
 }
 
-void algoritmoGreedy(std::string &nombreArchivo) {
+void algoritmo_greedy(std::string &nombre_archivo) {
 
-    std::cout << "\nResultados del algoritmo Greedy" << std::endl << "---------------------------------"
-              << std::endl;
+    if (echo) {
+        std::cout << "\nResultados del algoritmo Greedy" << std::endl << "---------------------------------"
+                  << std::endl;
+    }
 
     int tamanno_matriz;
-    auto matrices = ingestaDeDatos(nombreArchivo, tamanno_matriz);
+    auto matrices = ingesta_datos(nombre_archivo, tamanno_matriz);
     auto flujo = matrices.first;
     auto distancias = matrices.second;
 
@@ -302,58 +295,61 @@ void algoritmoGreedy(std::string &nombreArchivo) {
     }
 
     int coste = funcion_objetivo(solucion, flujo, distancias);
-    std::cout << "Coste de la solucion: " << coste << std::endl;
 
-    std::cout << "| Unidad >> Pos | Flujo | Dist |" << std::endl;
-    std::cout << "|---------------|-------|------|" << std::endl;
+    if (echo) {
+        std::cout << "Coste de la solucion: " << coste << std::endl;
 
-    for (int i = 0; i < flujos_indizados.size(); i++) {
-        std::cout << "| " << std::setw(6) << flujos_indizados[i].second + 1
-                  << " >> " << std::setw(3) << distancias_indizadas[i].second + 1
-                  << " | " << std::setw(5) << flujos_indizados[i].first
-                  << " | " << std::setw(4) << distancias_indizadas[i].first << " |" << std::endl;
+        std::cout << "| Unidad >> Pos | Flujo | Dist |" << std::endl;
+        std::cout << "|---------------|-------|------|" << std::endl;
+
+        for (int i = 0; i < flujos_indizados.size(); i++) {
+            std::cout << "| " << std::setw(6) << flujos_indizados[i].second + 1
+                      << " >> " << std::setw(3) << distancias_indizadas[i].second + 1
+                      << " | " << std::setw(5) << flujos_indizados[i].first
+                      << " | " << std::setw(4) << distancias_indizadas[i].first << " |" << std::endl;
+        }
+        std::cout << "|------------------------------|" << std::endl;
     }
-    std::cout << "|------------------------------|" << std::endl;
 }
 
-int funcion_objetivo(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
+int funcion_objetivo(const std::vector<int> &vec, const std::vector<std::vector<int>> &flujo,
                      const std::vector<std::vector<int>> &distancia) {
-    size_t n = p.size();
+    size_t n = vec.size();
     int coste = 0;
 
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            coste += flujo[i][j] * distancia[p[i]][p[j]];
+            coste += flujo[i][j] * distancia[vec[i]][vec[j]];
         }
     }
     return coste;
 }
 
-int delta_coste(const std::vector<int> &p, const std::vector<std::vector<int>> &flujo,
+int delta_coste(const std::vector<int> &vec, const std::vector<std::vector<int>> &flujo,
                 const std::vector<std::vector<int>> &distancia, int r, int s) {
-    size_t n = p.size();
+    size_t n = vec.size();
     int delta = 0;
 
     for (int k = 0; k < n; ++k) {
         if (k != r && k != s) {
-            delta += flujo[r][k] * (distancia[p[s]][p[k]] - distancia[p[r]][p[k]])
-                     + flujo[s][k] * (distancia[p[r]][p[k]] - distancia[p[s]][p[k]])
-                     + flujo[k][r] * (distancia[p[k]][p[s]] - distancia[p[k]][p[r]])
-                     + flujo[k][s] * (distancia[p[k]][p[r]] - distancia[p[k]][p[s]]);
+            delta += flujo[r][k] * (distancia[vec[s]][vec[k]] - distancia[vec[r]][vec[k]])
+                     + flujo[s][k] * (distancia[vec[r]][vec[k]] - distancia[vec[s]][vec[k]])
+                     + flujo[k][r] * (distancia[vec[k]][vec[s]] - distancia[vec[k]][vec[r]])
+                     + flujo[k][s] * (distancia[vec[k]][vec[r]] - distancia[vec[k]][vec[s]]);
         }
     }
     return delta;
 }
 
-void imprimirResumenSemilla(int semilla, int iteraciones, int coste_actual) {
+void imprimir_resumen_semilla(int semilla, int iteraciones, int coste_actual) {
     std::cout << "Semilla: " << semilla << std::endl;
     std::cout << "Numero de iteraciones: " << iteraciones << std::endl;
     std::cout << "Coste de la solucion para esta semilla: " << coste_actual << std::endl;
     std::cout << "---------------------------------------" << std::endl;
 }
 
-void imprimirResumenGlobal(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
-                           const std::vector<int> &mejor_solucion) {
+void imprimir_resumen_global(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
+                             const std::vector<int> &mejor_solucion) {
 
     std::cout << "\nCoste de la mejor solucion: " << coste_mejor_solucion << std::endl;
     std::cout << "Mejor semilla: " << mejor_semilla << std::endl;
@@ -368,14 +364,7 @@ void imprimirResumenGlobal(int coste_mejor_solucion, int mejor_semilla, int mejo
     std::cout << "|---------------|" << std::endl;
 }
 
-
-std::vector<int> intercambio(const std::vector<int> &p, int r, int s) {
-    std::vector<int> p_copia = p;
-    std::swap(p_copia[r], p_copia[s]);
-    return p_copia;
-}
-
-std::ofstream inicializarLog(const int semilla, const std::string &nombre_archivo) {
+std::ofstream inicializar_log(int semilla, const std::string &nombre_archivo) {
     std::filesystem::create_directory("logs");
 
     std::filesystem::path path(nombre_archivo);
@@ -391,104 +380,7 @@ std::ofstream inicializarLog(const int semilla, const std::string &nombre_archiv
     return archivo_log;
 }
 
-void escribirLog(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta) {
+void escribir_log(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta) {
     if (hacer_log)
-        archivo_log << "," << iteraciones << "," << i << "," << j << "," << coste_actual << "," << delta << "\n";
-}
-
-std::pair<std::vector<int>, int> PMDLBprueba(const std::string &nombre_archivo) {
-
-    std::cout << "\nResultados del algoritmo PMDLBprueba" << std::endl << "--------------------------------"
-              << std::endl;
-
-    int tamanno_matriz;
-    auto matrices = ingestaDeDatos(nombre_archivo, tamanno_matriz);
-
-    std::vector<std::vector<int>> flujo = matrices.first;
-    std::vector<std::vector<int>> distancia = matrices.second;
-
-    std::vector<int> solucion_inicial(tamanno_matriz);
-    for (int i = 0; i < tamanno_matriz; i++) {
-        solucion_inicial[i] = i;
-    }
-
-    std::vector<int> mejor_solucion_global = solucion_inicial;
-    int coste_mejor_solucion_global = INT_MAX;
-
-    if (semillas.empty()) {
-        semillas.push_back((int) std::random_device{}());
-    }
-
-    for (int semilla: semillas) {
-        std::mt19937 gen(semilla);
-
-        std::vector<int> solucion_actual = solucion_inicial;
-        std::vector<int> mejor_solucion = solucion_inicial;
-        int coste_mejor_solucion = funcion_objetivo(mejor_solucion, flujo, distancia);
-
-        // Inicializa la mascara DLB con todos los bits a 1
-        std::vector<int> DLB(tamanno_matriz, 1);
-
-        std::uniform_int_distribution<> dis(0, tamanno_matriz - 1);
-
-        int iteraciones = 0;
-        while (iteraciones < 1000) {
-            bool global_mejora = false;
-            int inicio = dis(gen);  // Genera un indice aleatorio como punto de inicio
-            for (int k = 0; k < tamanno_matriz; ++k) {
-                int i = (inicio + k) % tamanno_matriz;  // Calcula el indice actual de manera ciclica
-                if (DLB[i] == 0) {
-                    continue;
-                }
-
-                bool mejora = false;
-                for (int j = 0; j < tamanno_matriz; ++j) {
-                    if (i == j || DLB[j] == 0) {
-                        continue;
-                    }
-
-                    std::vector<int> solucion_vecina = intercambio(solucion_actual, i, j);
-                    int coste_vecina = funcion_objetivo(solucion_vecina, flujo, distancia);
-
-                    if (coste_vecina < coste_mejor_solucion) {
-                        coste_mejor_solucion = coste_vecina;
-                        mejor_solucion = solucion_vecina;
-                        solucion_actual = solucion_vecina;
-                        iteraciones++;
-                        std::fill(DLB.begin(), DLB.end(), 1);  // Resetear DLB
-                        DLB[j] = 0;  // Establecer el bit del ultimo elemento intercambiado a 0
-                        mejora = true;
-                        global_mejora = true;
-                        break;  // Salir del bucle de exploracion del vecindario
-                    }
-                }
-
-                if (!mejora) {
-                    DLB[i] = 0;
-                }
-            }
-
-            if (!global_mejora) break;  // Si no se ha encontrado mejora global, finalizar
-        }
-        std::cout << "\n\nNumero de iteraciones: " << iteraciones << std::endl;
-
-        std::cout << "\nCoste para semilla " << semilla << ": " << coste_mejor_solucion;
-
-        if (coste_mejor_solucion < coste_mejor_solucion_global) {
-            mejor_solucion_global = mejor_solucion;
-            coste_mejor_solucion_global = coste_mejor_solucion;
-        }
-    }
-
-    std::cout << "\n\nMejor resultado global: " << coste_mejor_solucion_global << std::endl;
-
-    std::cout << "| Unidad >> Pos |" << std::endl;
-    std::cout << "|---------------|" << std::endl;
-    for (int i = 0; i < tamanno_matriz; i++) {
-        std::cout << "|   " << std::setw(5) << i + 1
-                  << " >> " << std::setw(2) << mejor_solucion_global[i] + 1 << " |" << std::endl;
-    }
-    std::cout << "|---------------|" << std::endl;
-
-    return {mejor_solucion_global, coste_mejor_solucion_global};
+        archivo_log << iteraciones << "," << i << "," << j << "," << coste_actual << "," << delta << "\n";
 }
