@@ -14,7 +14,7 @@
 
 std::vector<int> semillas;
 bool echo = false;
-bool hacer_log = false;
+bool loggear = false;
 
 // Funciones
 void lectura_parametros(const std::string &nombre_archivo);
@@ -36,10 +36,10 @@ std::ofstream inicializar_log(int semilla, const std::string &nombre_archivo);
 int delta_coste(const std::vector<int> &vec, const std::vector<std::vector<int>> &flujo,
                 const std::vector<std::vector<int>> &distancia, int r, int s);
 
-void imprimir_resumen_semilla(int semilla, int iteraciones, int coste_actual);
+void imprimir_resumen_semilla_PM(int semilla, int iteraciones, int coste_actual);
 
-void imprimir_resumen_global(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
-                             const std::vector<int> &mejor_solucion);
+void imprimir_resumen_global_PM(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
+                                const std::vector<int> &mejor_solucion);
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -54,11 +54,39 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+bool esSimetrica(const std::vector<std::vector<int>>& matriz) {
+    int n = (int)(matriz.size());
+
+    for (int i = 0; i < n; ++i) {
+        if (matriz[i].size() != n) {
+            std::cout << "\nNO es simetrica\n";
+            return false;
+        }
+    }
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < i; ++j) {
+            if (matriz[i][j] != matriz[j][i]) {
+                std::cout << "\nNO es simetrica\n";
+                return false;
+            }
+        }
+    }
+    std::cout << "\nEs simetrica\n";
+    return true;
+}
+
+bool ambasSonSimetricas(const std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>& matrices) {
+    return esSimetrica(matrices.first) && esSimetrica(matrices.second);
+}
+
 std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_archivo) {
 
-    std::cout << "Algoritmo Primero el Mejor (DLB): " << std::endl;
-
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
+
+    if (echo) {
+        std::cout << "Algoritmo Primero el Mejor (DLB): " << std::endl;
+    }
 
     int tamanno_matriz;
     auto matrices = ingesta_datos(nombre_archivo, tamanno_matriz);
@@ -92,7 +120,7 @@ std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_arc
         std::shuffle(indices.begin(), indices.end(), random);
 
         std::ofstream log_file;
-        if (hacer_log)
+        if (loggear)
             log_file = inicializar_log(semilla, nombre_archivo);
 
         while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
@@ -114,7 +142,9 @@ std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_arc
                         DLB[j] = 0;
                         mejora = true;
 
-                        escribir_log(log_file, iteraciones, i, j, coste_actual, delta);
+                        if (loggear) {
+                            escribir_log(log_file, iteraciones, i, j, coste_actual, delta);
+                        }
 
                         if (coste_actual < coste_mejor_solucion) {
                             mejor_solucion = solucion_actual;
@@ -132,16 +162,16 @@ std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_arc
             }
         }
 
-        if (hacer_log)
+        if (loggear)
             log_file.close();
 
         if (echo) {
-            imprimir_resumen_semilla(semilla, iteraciones, coste_actual);
+            imprimir_resumen_semilla_PM(semilla, iteraciones, coste_actual);
         }
     }
 
     if (echo)
-        imprimir_resumen_global(coste_mejor_solucion, mejor_semilla, mejor_iteraciones, mejor_solucion);
+        imprimir_resumen_global_PM(coste_mejor_solucion, mejor_semilla, mejor_iteraciones, mejor_solucion);
 
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
@@ -194,7 +224,7 @@ void lectura_parametros(const std::string &nombre_archivo) {
     }
 
     if (parametros.find("log") != parametros.end()) {
-        hacer_log = (parametros["log"] == "true");
+        loggear = (parametros["log"] == "true");
     }
 
     std::string archivo_datos = parametros["nombre_del_archivo"];
@@ -245,10 +275,15 @@ ingesta_datos(const std::string &nombre_archivo, int &tamanno_matriz) {
     if (echo)
         std::cout << "\nArchivo " << nombre_archivo << " procesado correctamente." << std::endl;
 
+    esSimetrica(flujo);
+    esSimetrica(distancias);
+
     return std::make_pair(flujo, distancias);
 }
 
 void algoritmo_greedy(std::string &nombre_archivo) {
+
+    auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
     if (echo) {
         std::cout << "\nResultados del algoritmo Greedy" << std::endl << "---------------------------------"
@@ -310,6 +345,12 @@ void algoritmo_greedy(std::string &nombre_archivo) {
         }
         std::cout << "|------------------------------|" << std::endl;
     }
+
+    auto tiempo_fin = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+    if (echo) {
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+    }
 }
 
 int funcion_objetivo(const std::vector<int> &vec, const std::vector<std::vector<int>> &flujo,
@@ -341,15 +382,15 @@ int delta_coste(const std::vector<int> &vec, const std::vector<std::vector<int>>
     return delta;
 }
 
-void imprimir_resumen_semilla(int semilla, int iteraciones, int coste_actual) {
+void imprimir_resumen_semilla_PM(int semilla, int iteraciones, int coste_actual) {
     std::cout << "Semilla: " << semilla << std::endl;
     std::cout << "Numero de iteraciones: " << iteraciones << std::endl;
     std::cout << "Coste de la solucion para esta semilla: " << coste_actual << std::endl;
     std::cout << "---------------------------------------" << std::endl;
 }
 
-void imprimir_resumen_global(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
-                             const std::vector<int> &mejor_solucion) {
+void imprimir_resumen_global_PM(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
+                                const std::vector<int> &mejor_solucion) {
 
     std::cout << "\nCoste de la mejor solucion: " << coste_mejor_solucion << std::endl;
     std::cout << "Mejor semilla: " << mejor_semilla << std::endl;
@@ -381,6 +422,6 @@ std::ofstream inicializar_log(int semilla, const std::string &nombre_archivo) {
 }
 
 void escribir_log(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta) {
-    if (hacer_log)
+    if (loggear)
         archivo_log << iteraciones << "," << i << "," << j << "," << coste_actual << "," << delta << "\n";
 }
