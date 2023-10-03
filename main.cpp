@@ -15,6 +15,8 @@
 std::vector<int> semillas;
 bool echo = false;
 bool loggear = false;
+int numIteraciones = 0;
+int tenenciaTabu = 0;
 
 // Funciones
 void lectura_parametros(const std::string &nombre_archivo);
@@ -52,32 +54,6 @@ int main(int argc, char *argv[]) {
     lectura_parametros(archivo_parametros);
 
     return 0;
-}
-
-bool esSimetrica(const std::vector<std::vector<int>>& matriz) {
-    int n = (int)(matriz.size());
-
-    for (int i = 0; i < n; ++i) {
-        if (matriz[i].size() != n) {
-            std::cout << "\nNO es simetrica\n";
-            return false;
-        }
-    }
-
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < i; ++j) {
-            if (matriz[i][j] != matriz[j][i]) {
-                std::cout << "\nNO es simetrica\n";
-                return false;
-            }
-        }
-    }
-    std::cout << "\nEs simetrica\n";
-    return true;
-}
-
-bool ambasSonSimetricas(const std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>>& matrices) {
-    return esSimetrica(matrices.first) && esSimetrica(matrices.second);
 }
 
 std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_archivo) {
@@ -227,6 +203,14 @@ void lectura_parametros(const std::string &nombre_archivo) {
         loggear = (parametros["log"] == "true");
     }
 
+    if (parametros.find("numIteraciones") != parametros.end()) {
+        numIteraciones = std::stoi(parametros["numIteraciones"]);
+    }
+
+    if (parametros.find("tenenciaTabu") != parametros.end()) {
+        tenenciaTabu = std::stoi(parametros["tenenciaTabu"]);
+    }
+
     std::string archivo_datos = parametros["nombre_del_archivo"];
 
     if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
@@ -274,9 +258,6 @@ ingesta_datos(const std::string &nombre_archivo, int &tamanno_matriz) {
 
     if (echo)
         std::cout << "\nArchivo " << nombre_archivo << " procesado correctamente." << std::endl;
-
-    esSimetrica(flujo);
-    esSimetrica(distancias);
 
     return std::make_pair(flujo, distancias);
 }
