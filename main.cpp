@@ -9,6 +9,7 @@
 #include <random>
 #include <iomanip>
 #include <filesystem>
+#include <deque>
 
 // Variables globales
 
@@ -55,6 +56,149 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+std::pair<std::vector<int>, int> tabu_martes(const std::string &nombre_archivo) {
+
+    auto tiempo_inicio = std::chrono::high_resolution_clock::now();
+
+    if (echo) {
+        std::cout << "Algoritmo Tabu: " << std::endl;
+    }
+
+    int tamanno_matriz;
+    auto matrices = ingesta_datos(nombre_archivo, tamanno_matriz);
+    std::vector<std::vector<int>> flujo = matrices.first;
+    std::vector<std::vector<int>> distancia = matrices.second;
+
+    std::vector<int> solucion_inicial(tamanno_matriz);
+    for (int i = 0; i < tamanno_matriz; i++) {
+        solucion_inicial[i] = tamanno_matriz - i - 1;
+    }
+
+    std::vector<int> mejor_solucion = solucion_inicial;
+    int coste_mejor_solucion = funcion_objetivo(mejor_solucion, flujo, distancia);
+    int mejor_semilla = 0;
+    int mejor_iteraciones = 0;
+
+    for (int semilla: semillas) {
+        std::vector<int> solucion_actual = solucion_inicial;
+        int coste_actual = funcion_objetivo(solucion_actual, flujo, distancia);
+
+        std::vector<int> DLB(tamanno_matriz, 0);
+        std::vector<std::vector<int>> memoria_largo_plazo(tamanno_matriz, std::vector<int>(tamanno_matriz, 0));
+        std::deque<std::pair<int, int>> tabu_list(7, {-1, -1});  // Inicializamos con pares dummy
+        std::vector<std::vector<int>> matriz_tabu(tamanno_matriz, std::vector<int>(tamanno_matriz, 0));
+
+        int iteraciones = 0;
+
+        std::vector<int> indices(tamanno_matriz);
+        for (int i = 0; i < tamanno_matriz; i++) {
+            indices[i] = i;
+        }
+
+        std::default_random_engine random(semilla);
+        std::shuffle(indices.begin(), indices.end(), random);
+
+        std::ofstream log_file;
+        if (loggear)
+            log_file = inicializar_log(semilla, nombre_archivo);
+
+        while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < numIteraciones) {
+            for (int index: indices) {
+                int i = index;
+
+                if (DLB[i] == 1) {
+                    continue;
+                }
+
+                bool mejora = false;
+                for (int j = i + 1; j < tamanno_matriz; ++j) {
+                    int delta = delta_coste(solucion_actual, flujo, distancia, i, j);
+
+                    if (delta < 0) {
+                        std::swap(solucion_actual[i], solucion_actual[j]);
+                        iteraciones++;
+                        coste_actual += delta;
+                        DLB[j] = 0;
+                        mejora = true;
+
+                        if (loggear) {
+                            escribir_log(log_file, iteraciones, i, j, coste_actual, delta);
+                        }
+
+                        if (coste_actual < coste_mejor_solucion) {
+                            mejor_solucion = solucion_actual;
+                            coste_mejor_solucion = coste_actual;
+                            mejor_semilla = semilla;
+                            mejor_iteraciones = iteraciones;
+                        }
+                        break;
+                    }
+                }
+
+                if (!mejora) {
+                    DLB[i] = 1;
+                }
+            }
+        }
+
+        if(std::accumulate(DLB.begin(), DLB.end(), 0) == tamanno_matriz) {
+            int mejor_peor_coste = INT_MAX;
+            std::pair<int, int> mejor_peor_movimiento = {-1, -1};
+
+            for(int i = 0; i < tamanno_matriz; ++i) {
+                for(int j = i + 1; j < tamanno_matriz; ++j) {
+
+                    // Si esta en la lista
+                    if(std::find(tabu_list.begin(), tabu_list.end(), std::make_pair(i, j)) != tabu_list.end()) {
+                        continue;
+                    }
+
+                    int delta = delta_coste(solucion_actual, flujo, distancia, i, j);
+
+                    if(delta > 0 && delta < mejor_peor_coste) {
+                        mejor_peor_coste = delta;
+                        mejor_peor_movimiento = {i, j};
+                    }
+                }
+            }
+
+            if(mejor_peor_movimiento.first != -1 && mejor_peor_movimiento.second != -1) {
+                std::swap(solucion_actual[mejor_peor_movimiento.first], solucion_actual[mejor_peor_movimiento.second]);
+                coste_actual += mejor_peor_coste;
+                iteraciones++;
+
+                if(tabu_list.size() >= tenenciaTabu) {
+                    tabu_list.pop_front();
+                }
+                tabu_list.push_back(mejor_peor_movimiento);
+            }
+
+            std::bernoulli_distribution distribucion(0.5);
+
+            for(int i = 0; i < tamanno_matriz; ++i) {
+                DLB[i] = distribucion(random) ? 1 : 0;
+            }
+        }
+
+        if (loggear)
+            log_file.close();
+
+        if (echo) {
+            imprimir_resumen_semilla_PM(semilla, iteraciones, coste_actual);
+        }
+    }
+
+    if (echo)
+        imprimir_resumen_global_PM(coste_mejor_solucion, mejor_semilla, mejor_iteraciones, mejor_solucion);
+
+    auto tiempo_fin = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+    std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+
+    return {mejor_solucion, coste_mejor_solucion};
+}
+
 
 std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_archivo) {
 
@@ -108,7 +252,8 @@ std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_arc
                 }
 
                 bool mejora = false;
-                for (int j = i + 1; j < tamanno_matriz; ++j) {
+                int pasos = 0;
+                for (int j = (i + 1) % tamanno_matriz; pasos < tamanno_matriz; j = (j + 1) % tamanno_matriz, ++pasos) {
                     int delta = delta_coste(solucion_actual, flujo, distancia, i, j);
 
                     if (delta < 0) {
@@ -155,6 +300,7 @@ std::pair<std::vector<int>, int> primero_mejor_DLB(const std::string &nombre_arc
 
     return {mejor_solucion, coste_mejor_solucion};
 }
+
 
 void lectura_parametros(const std::string &nombre_archivo) {
 
@@ -222,6 +368,13 @@ void lectura_parametros(const std::string &nombre_archivo) {
         primero_mejor_DLB(archivo_datos);
         return;
     }
+
+    if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
+        tabu_martes(archivo_datos);
+        return;
+    }
+
+
 
     std::cout << "Archivo " << nombre_archivo << " leido correctamente. No se ha indicado ninguna funcion conocida";
 }
