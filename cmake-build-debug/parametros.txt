@@ -1,4 +1,4 @@
-nombre_del_archivo=datos/ford03.dat
+nombre_del_archivo=datos/ford01.dat
 
 # Uso: semilla=1 -- semilla=3293,423,4166 -- semilla= -- etc
 semilla=77646884,47764688,84776468,88477646,68847764
@@ -11,12 +11,14 @@ algoritmo=3
 echo=true
 
 # Crear archivos log
-# Linea1: PARAM=smeilla, fichero, parametrosextra
+# Linea1: PARAM=semilla, fichero, parametrosextra
 # It1, (solucion), evaluacion,
 # It2, (movimiento), (solucion), evaluacion,
+# It3, ...
 # Poner tambien que cada un 5% de iteraciones detecte si hay un estancamiento (la soluicion no mejora) y reinicialice
 # Se puede poner tambien si una solucion es mejor local, la DLB, el estado del vector (???)
-log=false
+# La reinicializacion borra TODO menos el mejor del momento anterior y el mejor hasta el momento
+log=true
 
-numIteraciones=1000
-tenenciaTabu=7
+max_iteraciones=1000
+tenencia_tabu=7
