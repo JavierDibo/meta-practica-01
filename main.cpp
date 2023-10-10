@@ -14,6 +14,7 @@ using vector = std::vector<int>;
 using string = std::string;
 using movimiento = std::pair<int, int>;
 using matriz = std::vector<std::vector<int>>;
+using mapa = std::map<string, string>;
 
 // Variables globales
 
@@ -28,7 +29,7 @@ string archivo_datos;
 
 std::pair<vector, int> tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia);
 
-std::map<string, string> lectura_parametros(const string &nombre_archivo) {
+mapa lectura_parametros(const string &nombre_archivo) {
 
     std::ifstream archivo_parametros(nombre_archivo);
     if (!archivo_parametros.is_open()) {
@@ -194,7 +195,7 @@ void imprimir_resumen_global_PM(int coste_mejor_solucion, int mejor_semilla, int
     std::cout << "|---------------|" << std::endl;
 }
 
-void lanzar_algoritmo(std::map<string, string> parametros) {
+void lanzar_algoritmo(mapa parametros) {
 
     int tamanno_matriz;
     matriz flujo, distancia;
@@ -215,7 +216,7 @@ int main(int argc, char *argv[]) {
 
     string archivo_parametros = argv[1];
 
-    std::map<string, string> parametros = lectura_parametros(archivo_parametros);
+    mapa parametros = lectura_parametros(archivo_parametros);
 
     lanzar_algoritmo(parametros);
 
@@ -228,11 +229,13 @@ std::pair<vector, int> tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distan
 
     if (echo) { std::cout << "Algoritmo tabu_v1: " << std::endl; }
 
-    // Solucion base (20...1)
+    // Solucion inicial aleatoria
     vector solucion_inicial(tamanno_matriz);
     for (int i = 0; i < tamanno_matriz; i++) {
-        solucion_inicial[i] = tamanno_matriz - i - 1;
+        solucion_inicial[i] = i;
     }
+    std::default_random_engine sol_incial_random(semillas[0]);
+    std::shuffle(solucion_inicial.begin(), solucion_inicial.end(), sol_incial_random);
 
     // Variables
     vector mejor_solucion = solucion_inicial;
@@ -256,13 +259,14 @@ std::pair<vector, int> tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distan
         for (int i = 0; i < tamanno_matriz; i++) {
             indices[i] = i;
         }
-
         std::default_random_engine random(semilla);
         std::shuffle(indices.begin(), indices.end(), random);
 
+        // Logging
         std::ofstream log_file;
         if (loggear) { log_file = inicializar_log(semilla, archivo_datos, "tabu"); }
 
+        // Mientras la DLB tenga candidatos || queden iteraciones
         while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < max_iteraciones) {
             for (int index: indices) {
                 int i = index;
