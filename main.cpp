@@ -124,7 +124,7 @@ void leer_matrices(const string &nombre_archivo, int &tamanno_matriz, matriz &fl
     if (echo) { std::cout << "\nArchivo " << nombre_archivo << " procesado correctamente." << std::endl; }
 }
 
-int coste_solucion(const vector &vec, const matriz &flujo, const matriz &distancia) {
+int calcular_coste_solucion(const vector &vec, const matriz &flujo, const matriz &distancia) {
     size_t n = vec.size();
     int coste = 0;
 
@@ -223,6 +223,55 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+vector vector_aleatorio(int tamanno_matriz, int semilla) {
+
+    vector vec(tamanno_matriz);
+    for (int i = 0; i < tamanno_matriz; i++) {
+        vec[i] = i;
+    }
+    std::default_random_engine random(semilla);
+    std::shuffle(vec.begin(), vec.end(), random);
+
+    return vec;
+}
+
+bool condicion_parada_principal(const vector &DLB, const int &iteraciones) {
+    return std::accumulate(DLB.begin(), DLB.end(), 0) < DLB.size() && iteraciones < max_iteraciones;
+}
+
+bool movimiento_en_lista_tabu(const std::vector<movimiento> &lista_tabu, const movimiento &mov) {
+
+    for (const auto &m: lista_tabu) {
+        if (m == mov) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool puedo_realizar_movimiento(const std::vector<movimiento> &lista_tabu, const movimiento &mov, const int &delta) {
+    return (!movimiento_en_lista_tabu(lista_tabu, mov) && (delta < 0));
+}
+
+void actualizar_lista_tabu(std::vector<movimiento> &lista_tabu, const movimiento &mov) {
+
+    lista_tabu.push_back(mov);
+
+    if (lista_tabu.size() > tenencia_tabu) {
+        lista_tabu.erase(lista_tabu.begin());
+    }
+}
+
+void realizar_movimiento(vector &vec, movimiento &mov) {
+
+    if (mov.first < vec.size() && mov.second < vec.size()) {
+        std::swap(vec[mov.first], vec[mov.second]);
+        return;
+    }
+
+    std::cerr << "realizar_movimiento::Error: Indices de movimiento fuera de rango." << std::endl;
+}
+
 std::pair<vector, int> tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
@@ -230,16 +279,11 @@ std::pair<vector, int> tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distan
     if (echo) { std::cout << "Algoritmo tabu_v1: " << std::endl; }
 
     // Solucion inicial aleatoria
-    vector solucion_inicial(tamanno_matriz);
-    for (int i = 0; i < tamanno_matriz; i++) {
-        solucion_inicial[i] = i;
-    }
-    std::default_random_engine sol_incial_random(semillas[0]);
-    std::shuffle(solucion_inicial.begin(), solucion_inicial.end(), sol_incial_random);
+    vector solucion_inicial = vector_aleatorio(tamanno_matriz, semillas[0]);
 
     // Variables
     vector mejor_solucion = solucion_inicial;
-    int coste_mejor_solucion = coste_solucion(mejor_solucion, flujo, distancia);
+    int coste_mejor_solucion = calcular_coste_solucion(mejor_solucion, flujo, distancia);
     int mejor_semilla = 0, mejor_iteraciones = 0;
 
     // Loop de semillas
@@ -247,61 +291,49 @@ std::pair<vector, int> tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distan
 
         // Iniciacion de variables para el algoritmo
         vector solucion_actual = solucion_inicial;
-        int coste_actual = coste_solucion(solucion_actual, flujo, distancia), iteraciones = 0;
+        int coste_actual = calcular_coste_solucion(solucion_actual, flujo, distancia);
+        int iteraciones = 0;
 
+        // Estructuras de memoria
         matriz memoria_largo_plazo(tamanno_matriz, vector(tamanno_matriz, 0));
-
         std::vector<movimiento> lista_tabu;
-
-        vector DLB(tamanno_matriz, 0), indices(tamanno_matriz);
+        vector DLB(tamanno_matriz, 0);
 
         // Empezar en indice aleatorio sin saltarse ninguno
-        for (int i = 0; i < tamanno_matriz; i++) {
-            indices[i] = i;
-        }
-        std::default_random_engine random(semilla);
-        std::shuffle(indices.begin(), indices.end(), random);
+        vector indices = vector_aleatorio(tamanno_matriz, semilla);
 
         // Logging
         std::ofstream log_file;
         if (loggear) { log_file = inicializar_log(semilla, archivo_datos, "tabu"); }
 
         // Mientras la DLB tenga candidatos || queden iteraciones
-        while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < max_iteraciones) {
+        while (iteraciones < max_iteraciones) {
+
+            // Explorar
             for (int index: indices) {
                 int i = index;
 
+                // Si el movimiento ya esta explorado
                 if (DLB[i] == 1) {
                     continue;
                 }
 
                 bool mejora = false;
+
+                // Recorrer el rango de j e i entero
                 int pasos = 0;
-                for (int j = (i + 1) % tamanno_matriz; pasos < tamanno_matriz; j = (j + 1) % tamanno_matriz, ++pasos) {
+                for (int j = (i + 1) % tamanno_matriz;
+                     pasos < tamanno_matriz && i != j; j = (j + 1) % tamanno_matriz, ++pasos) {
+
+                    // Datos actuales
                     int delta = delta_coste(solucion_actual, flujo, distancia, i, j);
-                    // int movimientos_empeoramiento = 0;
+                    movimiento movimiento_actual = std::make_pair(i, j);
 
-                    // Lógica para movimientos de empeoramiento
-                    if (std::accumulate(DLB.begin(), DLB.end(), 0) == tamanno_matriz) {
-                        // realizar_el_mejor_de_los_peores_movimientos(solucion_actual, flujo, distancia, coste_actual);
-                        // reiniciar_DLB(DLB);
-                        // movimientos_empeoramiento++;
-                    }
+                    // Lógica de lista tabu
+                    if (puedo_realizar_movimiento(lista_tabu, movimiento_actual, delta)) {
 
-                    // Lógica para reinicio con memoria a largo plazo
-                    /*if (movimientos_de_empeoramiento_durante_5_por_ciento_de_iteraciones(movimientos_empeoramiento,
-                                                                                         iteraciones)) {
-                        reiniciar_con_memoria_largo_plazo(solucion_actual, memoria_largo_plazo);
-                        movimientos_empeoramiento = 0;
-                    }*/
-
-                    // movimiento movimiento_actual = std::make_pair(i, j);
-
-                    // Lógica de lista tabú
-                    if (// !movimiento_en_lista_tabu(lista_tabu, movimiento_actual) ||
-                            (delta < 0)) {
-
-                        std::swap(solucion_actual[i], solucion_actual[j]);
+                        // TODO ver si estoy generando todo el vecindario correctamente
+                        realizar_movimiento(solucion_actual, movimiento_actual);
                         iteraciones++;
                         coste_actual += delta;
                         DLB[j] = 0;
@@ -317,12 +349,14 @@ std::pair<vector, int> tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distan
                         }
 
                         // Añade el movimiento a la lista tabú
-                        // actualizar_lista_tabu(lista_tabu, movimiento_actual);
+                        actualizar_lista_tabu(lista_tabu, movimiento_actual);
 
-                        break;  // Sale del bucle una vez que se ha realizado un movimiento
+                        // Salir del bucle una vez que se ha realizado un movimiento
+                        break;
                     }
                 }
 
+                // Si hemos explorado las mejores soluciones
                 if (!mejora) {
                     DLB[i] = 1;
                 }
