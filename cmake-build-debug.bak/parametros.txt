@@ -8,7 +8,7 @@ semilla=77646884,47764688,84776468,88477646,68847764
 algoritmo=3
 
 # Imprimir por consola
-echo=true
+ECHO=true
 
 # Crear archivos log
 # Linea1: PARAM=semilla, fichero, parametrosextra

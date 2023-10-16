@@ -22,3 +22,4 @@ log=true
 
 max_iteraciones=1000
 tenencia_tabu=7
+num_max_vecinos=30
