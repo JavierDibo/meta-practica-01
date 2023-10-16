@@ -1,4 +1,4 @@
-nombre_del_archivo=datos/ford02.dat
+nombre_del_archivo=datos/ford01.dat
 
 # Uso: semilla=1 -- semilla=3293,423,4166 -- semilla= -- etc
 semilla=77646884,47764688,84776468,88477646,68847764
