@@ -26,6 +26,7 @@ bool loggear = false;
 int max_iteraciones = 0;
 int tenencia_tabu = 0;
 string archivo_datos;
+int num_estancamiento;
 
 // Funciones
 
@@ -80,6 +81,7 @@ mapa lectura_parametros(const string &nombre_archivo) {
 
     if (parametros.find("max_iteraciones") != parametros.end()) {
         max_iteraciones = std::stoi(parametros["max_iteraciones"]);
+        num_estancamiento = (int)(max_iteraciones * 0.05);
     }
 
     if (parametros.find("tenencia_tabu") != parametros.end()) {
@@ -349,18 +351,23 @@ generar_vecinos(const vector &solucion, const int tam, const matriz &flujo, cons
 
 bool condicion_estancamiento(const vector &registro_deltas) {
 
-    if (registro_deltas.size() < 50) {
+    if (registro_deltas.size() < num_estancamiento) {
         return false;
     }
 
-    // Comprueba los ultimos 50 elementos
-    for (size_t i = registro_deltas.size() - 50; i < registro_deltas.size(); ++i) {
+    // Comprueba los ultimos 5% de elementos
+    for (size_t i = registro_deltas.size() - num_estancamiento; i < registro_deltas.size(); ++i) {
         if (registro_deltas[i] < 0) {
             return false;
         }
     }
 
     return true;
+}
+
+void actualizar_registro_deltas(int &ultimo_delta, int &coste_actual, vector &registro_deltas) {
+    coste_actual += ultimo_delta;
+    registro_deltas.emplace_back(ultimo_delta);
 }
 
 void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
@@ -380,6 +387,8 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
         int coste_actual = calcular_coste_solucion(solucion_actual, flujo, distancia);
         int iteraciones = 0;
         int num_reseteos_DLB = 0;
+        vector registro_deltas((int) (max_iteraciones * 0.05));
+        int delta_vecino;
 
         // Estructuras de memoria
         matriz memoria_largo_plazo(tamanno_matriz, vector(tamanno_matriz, 0));
@@ -433,11 +442,7 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
                                                  DLB);
                             }
 
-                            vector registro_deltas(max_iteraciones);
-                            registro_deltas.emplace_back(delta_actual);
-
-
-
+                            actualizar_registro_deltas(delta_actual, coste_actual, registro_deltas);
 
                             // Salir del bucle una vez que se ha realizado un movimiento
                             break;
@@ -454,15 +459,11 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
             // Si todos los DLB son 1, moverse hacia el mejor de los peores y generar un DLB aleatorio
             DLB = randomizar_DLB(semilla, tamanno_matriz, num_reseteos_DLB++);
 
-            std::pair<movimiento, int> mejor_vecino =
-                    generar_vecinos(solucion_actual, tamanno_matriz, flujo, distancia);
+            auto mejor_vecino = generar_vecinos(solucion_actual, tamanno_matriz, flujo, distancia);
 
             realizar_movimiento(solucion_actual, mejor_vecino.first, lista_tabu, memoria_largo_plazo, iteraciones);
 
-            int delta_vecino = mejor_vecino.second;
-            coste_actual += delta_vecino;
-            vector registro_deltas((int) (max_iteraciones * 0.05));
-            registro_deltas.emplace_back(delta_vecino);
+            actualizar_registro_deltas(mejor_vecino.second, coste_actual, registro_deltas);
 
             if (loggear) {
                 escribir_log_DLB(log_file, iteraciones, mejor_vecino.first.first, mejor_vecino.first.second,
@@ -471,7 +472,7 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
 
             if (condicion_estancamiento(registro_deltas)) {
 
-                //TODO implementar logica de oscilacion estrategica
+                // TODO implementar logica de oscilacion estrategica
                 std::cout << "Nos hemos estancado" << std::endl;
             }
         }
