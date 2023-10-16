@@ -308,7 +308,7 @@ void actualizar_lista_tabu(std::vector<movimiento> &lista_tabu, const movimiento
 }
 
 void realizar_movimiento(vector &vec, const movimiento &mov, std::vector<movimiento> &lista_tabu,
-                         matriz &memoria_largo_plazo) {
+                         matriz &memoria_largo_plazo, int &iteraciones) {
 
     if (mov.first >= vec.size() || mov.second >= vec.size()) {
         std::cerr << "realizar_movimiento::Error: Indices de movimiento fuera de rango." << std::endl;
@@ -317,6 +317,7 @@ void realizar_movimiento(vector &vec, const movimiento &mov, std::vector<movimie
 
     // Realiza el movimiento
     std::swap(vec[mov.first], vec[mov.second]);
+    iteraciones++;
 
     // Añade el movimiento a la lista tabú
     actualizar_lista_tabu(lista_tabu, mov);
@@ -346,6 +347,21 @@ generar_vecinos(const vector &solucion, const int tam, const matriz &flujo, cons
     return {mejor_mov, mejor_delta};
 }
 
+bool condicion_estancamiento(const vector &registro_deltas) {
+
+    if (registro_deltas.size() < 50) {
+        return false;
+    }
+
+    // Comprueba los ultimos 50 elementos
+    for (size_t i = registro_deltas.size() - 50; i < registro_deltas.size(); ++i) {
+        if (registro_deltas[i] < 0) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
 
@@ -407,8 +423,7 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
 
                         if (delta_actual < 0) {
                             realizar_movimiento(solucion_actual, movimiento_actual, lista_tabu,
-                                                memoria_largo_plazo);
-                            iteraciones++;
+                                                memoria_largo_plazo, iteraciones);
                             coste_actual += delta_actual;
                             DLB[mov_j] = 1;
                             mejora = true;
@@ -417,6 +432,10 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
                                 escribir_log_DLB(log_file, iteraciones, mov_i, mov_j, coste_actual, delta_actual,
                                                  DLB);
                             }
+
+                            vector registro_deltas(max_iteraciones);
+                            registro_deltas.emplace_back(delta_actual);
+
 
 
 
@@ -435,16 +454,25 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
             // Si todos los DLB son 1, moverse hacia el mejor de los peores y generar un DLB aleatorio
             DLB = randomizar_DLB(semilla, tamanno_matriz, num_reseteos_DLB++);
 
-            std::pair<movimiento, int> mejor_mov_malo = generar_vecinos(solucion_actual, tamanno_matriz, flujo,
-                                                                        distancia);
+            std::pair<movimiento, int> mejor_vecino =
+                    generar_vecinos(solucion_actual, tamanno_matriz, flujo, distancia);
 
-            realizar_movimiento(solucion_actual, mejor_mov_malo.first, lista_tabu, memoria_largo_plazo);
-            iteraciones++;
-            coste_actual += mejor_mov_malo.second;
+            realizar_movimiento(solucion_actual, mejor_vecino.first, lista_tabu, memoria_largo_plazo, iteraciones);
+
+            int delta_vecino = mejor_vecino.second;
+            coste_actual += delta_vecino;
+            vector registro_deltas((int) (max_iteraciones * 0.05));
+            registro_deltas.emplace_back(delta_vecino);
 
             if (loggear) {
-                escribir_log_DLB(log_file, iteraciones, mejor_mov_malo.first.first, mejor_mov_malo.first.second,
-                                 coste_actual, mejor_mov_malo.second, DLB);
+                escribir_log_DLB(log_file, iteraciones, mejor_vecino.first.first, mejor_vecino.first.second,
+                                 coste_actual, delta_vecino, DLB);
+            }
+
+            if (condicion_estancamiento(registro_deltas)) {
+
+                //TODO implementar logica de oscilacion estrategica
+                std::cout << "Nos hemos estancado" << std::endl;
             }
         }
 
