@@ -55,7 +55,7 @@ FUNCION tabu_mar(tamanno_matriz, flujo, distancia):
                 coste_mejor_solucion = coste_actual
 
             // Actualizar lista tabú
-            lista_tabu = actualizar_lista_tabu(lista_tabu, movimiento(i, j))
+            lista_tabu = actualizar_lista_tabu_implicita(lista_tabu, movimiento(i, j))
 
             // Actualizar memoria a largo plazo y posiblemente reiniciar búsqueda (opcional)
             memoria_largo_plazo = actualizar_memoria_largo_plazo(memoria_largo_plazo, solucion_actual)
@@ -120,7 +120,7 @@ FIN FUNCION
     - **Entrada**: Solución actual, índices a intercambiar.
     - **Salida**: Nueva solución.
 
-10. **`actualizar_lista_tabu(lista_tabu, movimiento)`**
+10. **`actualizar_lista_tabu_implicita(lista_tabu, movimiento)`**
     - **Objetivo**: Actualizar la lista tabú con un nuevo movimiento.
     - **Entrada**: Lista tabú, movimiento a añadir.
     - **Salida**: Lista tabú actualizada.

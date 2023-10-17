@@ -11,8 +11,12 @@ echo=true
 # Crear archivos log
 log=true
 
-datos=ford01.dat,ford02.dat,ford03.dat,ford04.dat
-max_iteraciones=1000
+datos=ford03.dat
+#,ford02.dat,ford03.dat,ford04.dat
+max_iteraciones=10000
 tenencia_tabu=7
-num_max_vecinos=30
-porcetanje_estancamiento=0.10
+num_max_vecinos=90
+porcetanje_estancamiento=0.05
+
+# Si 1 entonces diversifica siempre si 0 entonces intensifica
+porcentaje_oscilar=0.50
