@@ -98,6 +98,8 @@ vector diversificar(const matriz &memoria_largo_plazo, const int &semilla, const
 
 vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const int &veces, const int &tam);
 
+std::vector<movimiento> funcion_ordenar_greedy(const vector &sumas, bool descending = false);
+
 int main(int argc, char *argv[]) {
 
     if (argc != 2) {
@@ -112,22 +114,6 @@ int main(int argc, char *argv[]) {
     lanzar_algoritmo(parametros);
 
     return 0;
-}
-
-std::vector<movimiento> funcion_ordenar_greedy(const vector &sumas, bool descending = false) {
-    std::vector<movimiento> sumas_indizadas;
-    for (int i = 0; i < sumas.size(); i++) {
-        sumas_indizadas.emplace_back(sumas[i], i);
-    }
-    if (descending) {
-        std::sort(sumas_indizadas.begin(), sumas_indizadas.end(),
-                  [](const movimiento &a, const movimiento &b) {
-                      return a.first > b.first;
-                  });
-    } else {
-        std::sort(sumas_indizadas.begin(), sumas_indizadas.end());
-    }
-    return sumas_indizadas;
 }
 
 void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &distancia) {
@@ -347,6 +333,22 @@ std::ofstream inicializar_log_DLB(int semilla, const string &nombre_archivo, con
     }
 
     return archivo_log;
+}
+
+std::vector<movimiento> funcion_ordenar_greedy(const vector &sumas, bool descending) {
+    std::vector<movimiento> sumas_indizadas;
+    for (int i = 0; i < sumas.size(); i++) {
+        sumas_indizadas.emplace_back(sumas[i], i);
+    }
+    if (descending) {
+        std::sort(sumas_indizadas.begin(), sumas_indizadas.end(),
+                  [](const movimiento &a, const movimiento &b) {
+                      return a.first > b.first;
+                  });
+    } else {
+        std::sort(sumas_indizadas.begin(), sumas_indizadas.end());
+    }
+    return sumas_indizadas;
 }
 
 int delta_coste(const vector &vec, const matriz &flujo, const matriz &distancia, movimiento mov) {
