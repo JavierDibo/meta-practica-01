@@ -1,7 +1,8 @@
 nombre_del_archivo=datos/ford01.dat
 
 # Uso: semilla=1 -- semilla=3293,423,4166 -- semilla= -- etc
-semilla=77646884,47764688,84776468,88477646,68847764
+semilla=77646884
+#,47764688,84776468,88477646,68847764
 
 # Algoritmos implementados: greedy || 1 || pm || 2
 # algoritmo=1 -- algoritmo=pm -- etc
@@ -23,3 +24,4 @@ log=true
 max_iteraciones=1000
 tenencia_tabu=7
 num_max_vecinos=30
+porcetanje_estancamiento=0.05
