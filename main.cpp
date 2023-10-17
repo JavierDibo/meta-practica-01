@@ -25,7 +25,7 @@ vector semillas;
 bool ECHO = false;
 bool LOG = false;
 int TENENCIA_TABU = 0;
-string archivo_datos;
+std::vector<string> ARCHIVOS_DATOS;
 int ITERACIONES_PARA_ESTANCAMIENTO;
 double PORCENTAJE_ESTANCAMIENTO;
 int MAX_ITERACIONES = 0;
@@ -37,7 +37,7 @@ int INFINITO_NEGATIVO = std::numeric_limits<int>::min();
 
 // Funciones
 
-void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia);
+void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos);
 
 void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &distancia);
 
@@ -47,21 +47,11 @@ void leer_matrices(const string &nombre_archivo, int &tamanno_matriz, matriz &fl
 
 int calcular_coste_solucion(const vector &vec, const matriz &flujo, const matriz &distancia);
 
-void escribir_log(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta);
-
-void escribir_log_DLB(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta,
-                      const std::vector<int> &DLB, const string &tag);
-
-std::ofstream inicializar_log(int semilla, const string &nombre_archivo, const string &algoritmo);
-
 std::ofstream inicializar_log_DLB(int semilla, const string &nombre_archivo, const string &algoritmo);
 
 int delta_coste(const vector &vec, const matriz &flujo, const matriz &distancia, movimiento mov);
 
 void imprimir_resumen_semilla(int semilla, int iteraciones, int coste_actual);
-
-void imprimir_resumen_global_PM(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
-                                const vector &mejor_solucion);
 
 void lanzar_algoritmo(mapa parametros);
 
@@ -100,6 +90,9 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
 
 std::vector<movimiento> funcion_ordenar_greedy(const vector &sumas, bool descending = false);
 
+void escribir_log_DLB(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
+                      const vector &DLB, const string &tag);
+
 int main(int argc, char *argv[]) {
 
     if (argc != 2) {
@@ -114,6 +107,90 @@ int main(int argc, char *argv[]) {
     lanzar_algoritmo(parametros);
 
     return 0;
+}
+
+void escribir_log_DLB(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
+                      const vector &DLB, const string &tag) {
+
+    archivo_log << iteraciones << "," << mov.first << "," << mov.second << "," << coste << "," << delta
+                << "," + tag + ",";
+
+    for (int dato: DLB) {
+        archivo_log << dato;
+    }
+
+    archivo_log << "\n";
+}
+
+void primero_mejor_DLB(int tamanno_matriz, const matriz &flujo, const matriz &distancia, const string &archivo_datos) {
+
+    auto tiempo_inicio = std::chrono::high_resolution_clock::now();
+
+    if (ECHO) { std::cout << "Algoritmo primero el mejor: " << std::endl; }
+
+    for (int semilla: semillas) {
+
+        vector solucion_inicial = vector_aleatorio(tamanno_matriz, semilla);
+
+        std::vector<int> solucion_actual = solucion_inicial;
+        int coste_actual = calcular_coste_solucion(solucion_actual, flujo, distancia);
+
+        std::vector<int> DLB(tamanno_matriz, 0);
+        int iteraciones = 0;
+
+        std::vector<int> indices(tamanno_matriz);
+        for (int i = 0; i < tamanno_matriz; i++) {
+            indices[i] = i;
+        }
+
+        std::default_random_engine random(semilla);
+        std::shuffle(indices.begin(), indices.end(), random);
+
+        std::ofstream log_file;
+        if (LOG) { log_file = inicializar_log_DLB(semilla, archivo_datos, "pm"); }
+
+        while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
+            for (int index: indices) {
+                int i = index;
+
+                if (DLB[i] == 1) {
+                    continue;
+                }
+
+                bool mejora = false;
+                for (int j = i + 1; j < tamanno_matriz; ++j) {
+
+                    movimiento movimiento_actual = std::make_pair(i, j);
+                    int delta = delta_coste(solucion_actual, flujo, distancia, movimiento_actual);
+
+                    if (delta < 0) {
+                        std::swap(solucion_actual[i], solucion_actual[j]);
+                        iteraciones++;
+                        coste_actual += delta;
+                        DLB[j] = 1;
+                        mejora = true;
+
+                        if (LOG) {
+                            escribir_log_DLB(log_file, iteraciones, movimiento_actual, coste_actual, delta, DLB, "");
+                        }
+                        break;
+                    }
+                }
+
+                if (!mejora) {
+                    DLB[i] = 1;
+                }
+            }
+        }
+
+        if (LOG) { log_file.close(); }
+
+        if (ECHO) { imprimir_resumen_semilla(semilla, iteraciones, coste_actual); }
+    }
+
+    auto tiempo_fin = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+    std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
 }
 
 void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &distancia) {
@@ -153,24 +230,18 @@ void lanzar_algoritmo(mapa parametros) {
 
     int tamanno_matriz;
     matriz flujo, distancia;
-    leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
+    for (const auto &archivo_datos: ARCHIVOS_DATOS) {
+        leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
 
-    if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
-        tabu_mar(tamanno_matriz, flujo, distancia);
-        return;
-    }
-
-    if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
-        algoritmo_greedy(tamanno_matriz, flujo, distancia);
-        return;
-    }
-
-    if (parametros["algoritmo"] == "pm" || parametros["algoritmo"] == "2") {
-        tabu_mar(tamanno_matriz, flujo, distancia);
-        return;
+        if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
+            algoritmo_greedy(tamanno_matriz, flujo, distancia);
+        } else if (parametros["algoritmo"] == "pm" || parametros["algoritmo"] == "2") {
+            primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos);
+        } else if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
+            tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos);
+        }
     }
 }
-
 
 mapa lectura_parametros(const string &nombre_archivo) {
 
@@ -237,7 +308,14 @@ mapa lectura_parametros(const string &nombre_archivo) {
         ITERACIONES_PARA_ESTANCAMIENTO = static_cast<int>(std::round(MAX_ITERACIONES * PORCENTAJE_ESTANCAMIENTO));
     }
 
-    archivo_datos = parametros["nombre_del_archivo"];
+    if (parametros.find("datos") != parametros.end()) {
+        string archivos_string = parametros["datos"];
+        std::stringstream ss(archivos_string);
+        string archivo;
+        while (getline(ss, archivo, ',')) {
+            ARCHIVOS_DATOS.push_back("datos/" + archivo);
+        }
+    }
 
     return parametros;
 }
@@ -287,47 +365,26 @@ int calcular_coste_solucion(const vector &vec, const matriz &flujo, const matriz
     return coste;
 }
 
-void escribir_log(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta) {
-    archivo_log << iteraciones << "," << i << "," << j << "," << coste_actual << "," << delta << "\n";
-}
-
-void escribir_log_DLB(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta,
-                      const std::vector<int> &DLB, const string &tag) {
-
-    archivo_log << iteraciones << "," << i << "," << j << "," << coste_actual << "," << delta << "," + tag + ",";
-
-    for (int dato: DLB) {
-        archivo_log << dato;
-    }
-
-    archivo_log << "\n";
-}
-
-std::ofstream inicializar_log(int semilla, const string &nombre_archivo, const string &algoritmo) {
-    std::filesystem::create_directory("logs");
+std::ofstream inicializar_log_DLB(int semilla, const std::string &nombre_archivo, const std::string &algoritmo) {
 
     std::filesystem::path path(nombre_archivo);
-    string nombre = path.stem().string();
+    std::string nombre = path.stem().string();
 
-    string nombre_log = "logs/" + nombre + "_" + algoritmo + "_" + std::to_string(semilla) + ".csv";
+    std::string nombre_log =
+            "logs/" + algoritmo + "/" + nombre + "_" + algoritmo + "_" + std::to_string(semilla) + ".csv";
 
-    std::ofstream archivo_log(nombre_log);
-    if (archivo_log.is_open()) {
-        archivo_log << "Iteracion,Movimiento_i,Movimiento_j,Coste Actual,Delta,Tag\n";
+    std::filesystem::path directorio = std::filesystem::path(nombre_log).parent_path();
+    if (!std::filesystem::exists(directorio)) {
+        std::filesystem::create_directories(directorio);
     }
 
-    return archivo_log;
-}
-
-std::ofstream inicializar_log_DLB(int semilla, const string &nombre_archivo, const string &algoritmo) {
-    std::filesystem::create_directory("logs");
-
-    std::filesystem::path path(nombre_archivo);
-    string nombre = path.stem().string();
-
-    string nombre_log = "logs/" + nombre + "_" + algoritmo + "_" + std::to_string(semilla) + ".csv";
-
     std::ofstream archivo_log(nombre_log);
+
+    if (!archivo_log.is_open()) {
+        std::cerr << "inicializar_log_DLB::no se pudo abrir el archivo " + nombre_log << std::endl;
+        throw;
+    }
+
     if (archivo_log.is_open()) {
         archivo_log << "Iteracion,Movimiento_i,Movimiento_j,Coste Actual,Delta,Tag,DLB\n";
     }
@@ -374,22 +431,6 @@ void imprimir_resumen_semilla(int semilla, int iteraciones, int coste_actual) {
     std::cout << "Numero de iteraciones: " << iteraciones << std::endl;
     std::cout << "Coste de la solucion para esta semilla: " << coste_actual << std::endl;
     std::cout << "---------------------------------------" << std::endl;
-}
-
-void imprimir_resumen_global_PM(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
-                                const vector &mejor_solucion) {
-
-    std::cout << "\nCoste de la mejor solucion: " << coste_mejor_solucion << std::endl;
-    std::cout << "Mejor semilla: " << mejor_semilla << std::endl;
-    std::cout << "Numero de iteraciones de la mejor solucion: " << mejor_iteraciones << std::endl;
-    std::cout << "| Unidad >> Pos |" << std::endl;
-    std::cout << "|---------------|" << std::endl;
-
-    for (int i = 0; i < mejor_solucion.size(); i++) {
-        std::cout << "|   " << std::setw(5) << i + 1
-                  << " >> " << std::setw(2) << mejor_solucion[i] + 1 << " |" << std::endl;
-    }
-    std::cout << "|---------------|" << std::endl;
 }
 
 vector vector_aleatorio(int tamanno_matriz, int semilla) {
@@ -592,7 +633,7 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
     return resultado;
 }
 
-void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia) {
+void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
@@ -689,7 +730,7 @@ void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia) {
                             mejora = true;
 
                             if (LOG) {
-                                escribir_log_DLB(log_file, iteraciones, mov_i, mov_j, coste_actual, delta_actual,
+                                escribir_log_DLB(log_file, iteraciones, movimiento_actual, coste_actual, delta_actual,
                                                  DLB, "DLB");
                             }
 
@@ -720,10 +761,7 @@ void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia) {
 
             actualizar_registro_costes(coste_actual, registro_costes);
 
-            if (LOG) {
-                escribir_log_DLB(log_file, iteraciones, mejor_vecino.first.first, mejor_vecino.first.second,
-                                 coste_actual, delta, DLB, "EMP");
-            }
+            if (LOG) { escribir_log_DLB(log_file, iteraciones, mejor_vecino.first, coste_actual, delta, DLB, "EMP"); }
         }
 
         if (LOG) { log_file.close(); }

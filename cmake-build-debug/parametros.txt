@@ -1,11 +1,9 @@
-nombre_del_archivo=datos/ford01.dat
-
 # Uso: semilla=1 -- semilla=3293,423,4166 -- semilla= -- etc
 semilla=77646884,47764688,84776468,88477646,68847764
 
 # Algoritmos implementados: greedy || 1 || pm || 2 || tabu || 3
-# algoritmo=1 -- algoritmo=pm -- etc
-algoritmo=1
+# Uso: algoritmo=1 -- algoritmo=tabu -- etc
+algoritmo=3
 
 # Imprimir por consola
 echo=true
@@ -13,6 +11,7 @@ echo=true
 # Crear archivos log
 log=true
 
+datos=ford01.dat,ford02.dat,ford03.dat,ford04.dat
 max_iteraciones=1000
 tenencia_tabu=7
 num_max_vecinos=30
