@@ -3,7 +3,7 @@ nombre_del_archivo=datos/ford04.dat
 # Uso: semilla=1 -- semilla=3293,423,4166 -- semilla= -- etc
 semilla=77646884,47764688,84776468,88477646,68847764
 
-# Algoritmos implementados: greedy || 1 || pm || 2
+# Algoritmos implementados: greedy || 1 || pm || 2 || tabu || 3
 # algoritmo=1 -- algoritmo=pm -- etc
 algoritmo=3
 
@@ -11,13 +11,6 @@ algoritmo=3
 echo=true
 
 # Crear archivos log
-# Linea1: PARAM=semilla, fichero, parametrosextra
-# It1, (solucion), evaluacion,
-# It2, (movimiento), (solucion), evaluacion,
-# It3, ...
-# Poner tambien que cada un 5% de iteraciones detecte si hay un estancamiento (la soluicion no mejora) y reinicialice
-# Se puede poner tambien si una solucion es mejor local, la DLB, el estado del vector (???)
-# La reinicializacion borra TODO menos el mejor del momento anterior y el mejor hasta el momento
 log=true
 
 max_iteraciones=1000

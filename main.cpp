@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -23,20 +24,93 @@ using mapa = std::map<string, string>;
 vector semillas;
 bool ECHO = false;
 bool LOG = false;
-int MAX_ITERACIONES = 0;
 int TENENCIA_TABU = 0;
 string archivo_datos;
 int ITERACIONES_PARA_ESTANCAMIENTO;
+double PORCENTAJE_ESTANCAMIENTO;
+int MAX_ITERACIONES = 0;
 int INTENSIFICAR = 1;
 int DIVERSIFICAR = 0;
 int NUMERO_MAX_VECINOS;
 int INFINITO_POSITIVO = std::numeric_limits<int>::max();
 int INFINITO_NEGATIVO = std::numeric_limits<int>::min();
-float PORCENTAJE_ESTANCAMIENTO;
 
 // Funciones
 
 void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia);
+
+mapa lectura_parametros(const string &nombre_archivo);
+
+void leer_matrices(const string &nombre_archivo, int &tamanno_matriz, matriz &flujo, matriz &distancia);
+
+int calcular_coste_solucion(const vector &vec, const matriz &flujo, const matriz &distancia);
+
+void escribir_log(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta);
+
+void escribir_log_DLB(std::ofstream &archivo_log, int iteraciones, int i, int j, int coste_actual, int delta,
+                      const std::vector<int> &DLB, const string &tag);
+
+std::ofstream inicializar_log(int semilla, const string &nombre_archivo, const string &algoritmo);
+
+std::ofstream inicializar_log_DLB(int semilla, const string &nombre_archivo, const string &algoritmo);
+
+int delta_coste(const vector &vec, const matriz &flujo, const matriz &distancia, movimiento mov);
+
+void imprimir_resumen_semilla(int semilla, int iteraciones, int coste_actual);
+
+void imprimir_resumen_global_PM(int coste_mejor_solucion, int mejor_semilla, int mejor_iteraciones,
+                                const vector &mejor_solucion);
+
+void lanzar_algoritmo(mapa parametros);
+
+vector vector_aleatorio(int tamanno_matriz, int semilla);
+
+vector randomizar_DLB(int semilla, int tam, int &num_reseteos_DLB);
+
+int random_cero_uno(int semilla, int veces);
+
+bool is_DLB_llena(const vector &DLB);
+
+movimiento reverse_mov(movimiento mov);
+
+bool movimiento_en_lista_tabu(const std::vector<movimiento> &lista_tabu, const movimiento &mov);
+
+void actualizar_lista_tabu(std::vector<movimiento> &lista_tabu, const movimiento &mov);
+
+void realizar_movimiento(vector &vec, const movimiento &mov, std::vector<movimiento> &lista_tabu,
+                         matriz &memoria_largo_plazo, int &iteraciones);
+
+std::pair<movimiento, int>
+generar_vecinos(const vector &solucion, int tam, const matriz &flujo, const matriz &distancia,
+                const std::vector<movimiento> &lista_tabu);
+
+bool condicion_estancamiento(const vector &registro_costes, const std::pair<vector, int> &mejor_local);
+
+void actualizar_registro_costes(int ultimo_coste, vector &registro_costes);
+
+void resetar_memoria(std::vector<movimiento> &lista_tabu, matriz &memoria_largo_plazo);
+
+vector iniciar_registro_costes();
+
+vector diversificar(const matriz &memoria_largo_plazo, const int &semilla, const int &veces, const int &tam);
+
+vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const int &veces, const int &tam);
+
+int main(int argc, char *argv[]) {
+
+    if (argc != 2) {
+        std::cerr << "Uso: " << argv[0] << " <nombre del archivo de parametros>" << std::endl;
+        return 1;
+    }
+
+    string archivo_parametros = argv[1];
+
+    mapa parametros = lectura_parametros(archivo_parametros);
+
+    lanzar_algoritmo(parametros);
+
+    return 0;
+}
 
 mapa lectura_parametros(const string &nombre_archivo) {
 
@@ -100,7 +174,7 @@ mapa lectura_parametros(const string &nombre_archivo) {
 
     if (parametros.find("porcetanje_estancamiento") != parametros.end()) {
         PORCENTAJE_ESTANCAMIENTO = std::stof(parametros["porcetanje_estancamiento"]);
-        ITERACIONES_PARA_ESTANCAMIENTO = MAX_ITERACIONES * PORCENTAJE_ESTANCAMIENTO;
+        ITERACIONES_PARA_ESTANCAMIENTO = static_cast<int>(std::round(MAX_ITERACIONES * PORCENTAJE_ESTANCAMIENTO));
     }
 
     archivo_datos = parametros["nombre_del_archivo"];
@@ -201,7 +275,6 @@ std::ofstream inicializar_log_DLB(int semilla, const string &nombre_archivo, con
     return archivo_log;
 }
 
-
 int delta_coste(const vector &vec, const matriz &flujo, const matriz &distancia, movimiento mov) {
     size_t n = vec.size();
     int delta = 0;
@@ -253,22 +326,6 @@ void lanzar_algoritmo(mapa parametros) {
         tabu_v1(tamanno_matriz, flujo, distancia);
         return;
     }
-}
-
-int main(int argc, char *argv[]) {
-
-    if (argc != 2) {
-        std::cerr << "Uso: " << argv[0] << " <nombre del archivo de parametros>" << std::endl;
-        return 1;
-    }
-
-    string archivo_parametros = argv[1];
-
-    mapa parametros = lectura_parametros(archivo_parametros);
-
-    lanzar_algoritmo(parametros);
-
-    return 0;
 }
 
 vector vector_aleatorio(int tamanno_matriz, int semilla) {
@@ -390,7 +447,6 @@ bool condicion_estancamiento(const vector &registro_costes, const std::pair<vect
     return true;
 }
 
-
 void actualizar_registro_costes(const int ultimo_coste, vector &registro_costes) {
 
     registro_costes.push_back(ultimo_coste);
@@ -400,62 +456,16 @@ void actualizar_registro_costes(const int ultimo_coste, vector &registro_costes)
     }
 }
 
-void imprimir_solucion(const vector &solucion) {
-
-    std::cout << std::endl;
-    for (auto valor: solucion) {
-        std::cout << valor << " ";
-    }
-    std::cout << std::endl;
-}
-
-
-vector explorar(const matriz &memoria_largo_plazo) {
-    std::vector<int> resultado;
-    std::vector<bool> columnas_usadas(memoria_largo_plazo[0].size(), false);
-
-    for (const auto &fila: memoria_largo_plazo) {
-        int max_valor = -1;
-        int indice_columna = -1;
-
-        for (int j = 0; j < fila.size(); ++j) {
-            if (!columnas_usadas[j] && fila[j] > max_valor) {
-                max_valor = fila[j];
-                indice_columna = j;
-            }
-        }
-
-        if (indice_columna != -1) {
-            columnas_usadas[indice_columna] = true;
-            resultado.push_back(indice_columna);
-        }
-    }
-
-    imprimir_solucion(resultado);
-
-    return resultado;
-}
-
 void resetar_memoria(std::vector<movimiento> &lista_tabu, matriz &memoria_largo_plazo) {
     lista_tabu.clear();
-    int tam = memoria_largo_plazo.size();
+    int tam = static_cast<int>(memoria_largo_plazo.size());
     memoria_largo_plazo = matriz(tam, std::vector<int>(tam, 0));
 }
 
-void imprimir_memoria(const matriz &memoria_largo_plazo) {
-    for (auto const &columna: memoria_largo_plazo) {
-        for (auto valor: columna) {
-            std::cout << valor << " ";
-        }
-        std::cout << std::endl;
-    }
-
-    std::cout << "----------------------------------------" << std::endl;
-}
-
 vector iniciar_registro_costes() {
-    int tam = MAX_ITERACIONES * PORCENTAJE_ESTANCAMIENTO;
-    return vector(tam, INFINITO_NEGATIVO);
+    int tam = static_cast<int>(MAX_ITERACIONES * PORCENTAJE_ESTANCAMIENTO);
+    vector vec(tam, INFINITO_NEGATIVO);
+    return vec;
 }
 
 vector diversificar(const matriz &memoria_largo_plazo, const int &semilla, const int &veces, const int &tam) {
@@ -469,7 +479,7 @@ vector diversificar(const matriz &memoria_largo_plazo, const int &semilla, const
     std::vector<bool> usados(tam, false);
 
     for (const auto &fila: memoria_largo_plazo) {
-        indice = std::distance(fila.begin(), std::max_element(fila.begin(), fila.end()));
+        indice = static_cast<int>(std::distance(fila.begin(), std::max_element(fila.begin(), fila.end())));
 
         if (!usados[indice]) {
             resultado.push_back(indice);
@@ -478,7 +488,7 @@ vector diversificar(const matriz &memoria_largo_plazo, const int &semilla, const
             std::vector<int> temp = fila;
             while (usados[indice]) {
                 temp[indice] = std::numeric_limits<int>::min();
-                indice = std::distance(temp.begin(), std::max_element(temp.begin(), temp.end()));
+                indice = static_cast<int>(std::distance(temp.begin(), std::max_element(temp.begin(), temp.end())));
             }
             resultado.push_back(indice);
             usados[indice] = true;
@@ -499,7 +509,7 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
     std::vector<bool> usados(tam, false);
 
     for (const auto &fila: memoria_largo_plazo) {
-        indice = std::distance(fila.begin(), std::min_element(fila.begin(), fila.end()));
+        indice = static_cast<int>(std::distance(fila.begin(), std::min_element(fila.begin(), fila.end())));
 
         if (!usados[indice]) {
             resultado.push_back(indice);
@@ -508,7 +518,7 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
             std::vector<int> temp = fila;
             while (usados[indice]) {
                 temp[indice] = std::numeric_limits<int>::max();
-                indice = std::distance(temp.begin(), std::min_element(temp.begin(), temp.end()));
+                indice = static_cast<int>(std::distance(temp.begin(), std::min_element(temp.begin(), temp.end())));
             }
             resultado.push_back(indice);
             usados[indice] = true;
@@ -651,9 +661,6 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
                                  coste_actual, delta, DLB, "EMP");
             }
         }
-
-        // Equivalente a numero de iteraciones vacias
-        std::cout << "Numero de veces que se ha resetado la DLB (50%): " << num_reseteos_DLB << std::endl;
 
         if (LOG) { log_file.close(); }
 
