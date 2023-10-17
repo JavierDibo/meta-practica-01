@@ -283,7 +283,7 @@ vector vector_aleatorio(int tamanno_matriz, int semilla) {
     return vec;
 }
 
-vector randomizar_DLB(const int semilla, const int tam, const int num_reseteos_DLB) {
+vector randomizar_DLB(const int semilla, const int tam, int &num_reseteos_DLB) {
     std::default_random_engine random(semilla + num_reseteos_DLB);
     std::bernoulli_distribution distribucion(0.5);
     vector vec;
@@ -291,6 +291,8 @@ vector randomizar_DLB(const int semilla, const int tam, const int num_reseteos_D
     for (int i = 0; i < tam; i++) {
         vec.push_back(distribucion(random));
     }
+
+    num_reseteos_DLB++;
 
     return vec;
 }
@@ -483,22 +485,20 @@ vector diversificar(const matriz &memoria_largo_plazo, const int &semilla, const
         }
     }
 
-    imprimir_solucion(resultado);
-
     return resultado;
 }
 
 vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const int &veces, const int &tam) {
 
     std::default_random_engine random(semilla + veces);
-    std::uniform_int_distribution<int> distribution(0, tam-1);
+    std::uniform_int_distribution<int> distribution(0, tam - 1);
 
     int indice = distribution(random);
 
     std::vector<int> resultado;
     std::vector<bool> usados(tam, false);
 
-    for (const auto &fila : memoria_largo_plazo) {
+    for (const auto &fila: memoria_largo_plazo) {
         indice = std::distance(fila.begin(), std::min_element(fila.begin(), fila.end()));
 
         if (!usados[indice]) {
@@ -514,8 +514,6 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
             usados[indice] = true;
         }
     }
-
-    imprimir_solucion(resultado);
 
     return resultado;
 }
@@ -555,31 +553,25 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
 
         while (iteraciones < MAX_ITERACIONES) {
 
-            if (iteraciones == 300) {
-                int hola = 100;
-            }
-
             if (condicion_estancamiento(registro_costes, mejor_local)) {
 
                 int oscilador = random_cero_uno(semilla, num_oscilaciones++);
-                
+
                 if (oscilador == DIVERSIFICAR) {
                     /// Si tengo que diversificar adopto la solucion (empezando desde un indice aleatorio) y
                     /// maximizo en la memoria a largo plazo
-
-                    imprimir_memoria(memoria_largo_plazo);
-
                     solucion_actual = diversificar(memoria_largo_plazo, semilla, num_oscilaciones, tamanno_matriz);
 
-                    // imprimir_resumen_global_PM(coste_actual,semilla,iteraciones,solucion_actual);
                 } else if (oscilador == INTENSIFICAR) {
                     /// Si tengo que intensificar adopto la solucion (empezando desde un indice aleatorio) y
                     /// minimizo en la memoria a largo plazo
-
-                    imprimir_memoria(memoria_largo_plazo);
-
                     solucion_actual = intensificar(memoria_largo_plazo, semilla, num_oscilaciones, tamanno_matriz);
                 }
+
+                coste_actual = calcular_coste_solucion(solucion_actual, flujo, distancia);
+                registro_costes = iniciar_registro_costes();
+                resetar_memoria(lista_tabu, memoria_largo_plazo);
+                DLB = vector(tamanno_matriz, 0);
             }
 
             while (!is_DLB_llena(DLB)) {
@@ -642,7 +634,7 @@ void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
             }
 
             // Si todos los DLB son 1, moverse hacia el mejor de los peores y generar un DLB aleatorio
-            DLB = randomizar_DLB(semilla, tamanno_matriz, num_reseteos_DLB++);
+            DLB = randomizar_DLB(semilla, tamanno_matriz, num_reseteos_DLB);
 
             auto mejor_vecino = generar_vecinos(solucion_actual, tamanno_matriz, flujo, distancia, lista_tabu);
 
