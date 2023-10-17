@@ -37,7 +37,9 @@ int INFINITO_NEGATIVO = std::numeric_limits<int>::min();
 
 // Funciones
 
-void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia);
+void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia);
+
+void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &distancia);
 
 mapa lectura_parametros(const string &nombre_archivo);
 
@@ -111,6 +113,78 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+std::vector<movimiento> funcion_ordenar_greedy(const vector &sumas, bool descending = false) {
+    std::vector<movimiento> sumas_indizadas;
+    for (int i = 0; i < sumas.size(); i++) {
+        sumas_indizadas.emplace_back(sumas[i], i);
+    }
+    if (descending) {
+        std::sort(sumas_indizadas.begin(), sumas_indizadas.end(),
+                  [](const movimiento &a, const movimiento &b) {
+                      return a.first > b.first;
+                  });
+    } else {
+        std::sort(sumas_indizadas.begin(), sumas_indizadas.end());
+    }
+    return sumas_indizadas;
+}
+
+void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &distancia) {
+
+    auto tiempo_inicio = std::chrono::high_resolution_clock::now();
+
+    if (ECHO) { std::cout << "\nAlgoritmo greedy:" << std::endl; }
+
+    std::vector<int> sumatorio_flujos(tamanno_matriz, 0);
+    std::vector<int> sumatorio_distancias(tamanno_matriz, 0);
+
+    for (int i = 0; i < tamanno_matriz; ++i) {
+        for (int j = 0; j < tamanno_matriz; ++j) {
+            sumatorio_flujos[i] += flujo[i][j];
+            sumatorio_distancias[i] += distancia[i][j];
+        }
+    }
+
+    auto flujos_indizados = funcion_ordenar_greedy(sumatorio_flujos);
+    auto distancias_indizadas = funcion_ordenar_greedy(sumatorio_distancias, true);
+
+    std::vector<int> solucion(tamanno_matriz);
+    for (int i = 0; i < flujos_indizados.size(); i++) {
+        solucion[flujos_indizados[i].second] = distancias_indizadas[i].second;
+    }
+
+    int coste = calcular_coste_solucion(solucion, flujo, distancia);
+
+    auto tiempo_fin = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+
+    if (ECHO) { std::cout << "Coste: " << coste << std::endl; }
+    if (ECHO) { std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl; }
+}
+
+void lanzar_algoritmo(mapa parametros) {
+
+    int tamanno_matriz;
+    matriz flujo, distancia;
+    leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
+
+    if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
+        tabu_mar(tamanno_matriz, flujo, distancia);
+        return;
+    }
+
+    if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
+        algoritmo_greedy(tamanno_matriz, flujo, distancia);
+        return;
+    }
+
+    if (parametros["algoritmo"] == "pm" || parametros["algoritmo"] == "2") {
+        tabu_mar(tamanno_matriz, flujo, distancia);
+        return;
+    }
+}
+
 
 mapa lectura_parametros(const string &nombre_archivo) {
 
@@ -316,18 +390,6 @@ void imprimir_resumen_global_PM(int coste_mejor_solucion, int mejor_semilla, int
     std::cout << "|---------------|" << std::endl;
 }
 
-void lanzar_algoritmo(mapa parametros) {
-
-    int tamanno_matriz;
-    matriz flujo, distancia;
-    leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
-
-    if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
-        tabu_v1(tamanno_matriz, flujo, distancia);
-        return;
-    }
-}
-
 vector vector_aleatorio(int tamanno_matriz, int semilla) {
 
     vector vec(tamanno_matriz);
@@ -528,11 +590,11 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
     return resultado;
 }
 
-void tabu_v1(int tamanno_matriz, matriz &flujo, matriz &distancia) {
+void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
-    if (ECHO) { std::cout << "Algoritmo tabu_v1: " << std::endl; }
+    if (ECHO) { std::cout << "Algoritmo tabu_mar: " << std::endl; }
 
     // Solucion inicial aleatoria
     vector solucion_inicial = vector_aleatorio(tamanno_matriz, semillas[0]);

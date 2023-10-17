@@ -5,7 +5,7 @@ semilla=77646884,47764688,84776468,88477646,68847764
 
 # Algoritmos implementados: greedy || 1 || pm || 2 || tabu || 3
 # algoritmo=1 -- algoritmo=pm -- etc
-algoritmo=3
+algoritmo=1
 
 # Imprimir por consola
 echo=true

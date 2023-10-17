@@ -3,7 +3,7 @@
 ## Algoritmo tabu -- Pseudocodigo
 
 ```
-FUNCION tabu_v1(tamanno_matriz, flujo, distancia):
+FUNCION tabu_mar(tamanno_matriz, flujo, distancia):
     tiempo_inicio = obtener_tiempo_actual()
 
     // Generar la solución inicial
