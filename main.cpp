@@ -10,7 +10,6 @@
 #include <iomanip>
 #include <filesystem>
 #include <set>
-#include <tuple>
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -28,6 +27,7 @@ using mapa = std::map<string, string>;
 vector semillas;
 bool ECHO = false;
 bool LOG = false;
+bool PRAGMA;
 int TENENCIA_TABU = 0;
 std::vector<string> ARCHIVOS_DATOS;
 int ITERACIONES_PARA_ESTANCAMIENTO;
@@ -457,7 +457,7 @@ void lanzar_algoritmo(mapa parametros) {
                 primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
             }
         } else if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas)
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas) if(PRAGMA)
             for (const auto &semilla: semillas) {
                 tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
             }
@@ -551,6 +551,10 @@ mapa lectura_parametros(const string &nombre_archivo) {
 
     if (parametros.find("ventana_grasp") != parametros.end()) {
         VENTANA_GRASP = std::stoi(parametros["ventana_grasp"]);
+    }
+
+    if (parametros.find("pragma") != parametros.end()) {
+        PRAGMA = (parametros["pragma"] == "true");
     }
 
     return parametros;
@@ -1190,7 +1194,7 @@ void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &a
     std::pair<vector, int> mejor_solucion = {vector(tamanno_matriz, 0), INT_MAX};
     int mejor = -1;
 
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, semilla, NUM_ITERACIONES_GRASP, archivo_datos, mejor_solucion, mejor)
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, semilla, NUM_ITERACIONES_GRASP, archivo_datos, mejor_solucion, mejor) if (PRAGMA)
     for (int iteracion = 0; iteracion < NUM_ITERACIONES_GRASP; ++iteracion) {
 
         vector solucion_inicial = algoritmo_greedy_aletatorizado(tamanno_matriz, flujo, distancia, semilla,

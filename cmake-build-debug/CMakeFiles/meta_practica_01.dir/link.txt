@@ -1,0 +1,3 @@
+C:\Users\Administrator\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\232.9921.42\bin\cmake\win\x64\bin\cmake.exe -E rm -f CMakeFiles\meta_practica_01.dir/objects.a
+C:\Users\Administrator\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\232.9921.42\bin\mingw\bin\ar.exe qc CMakeFiles\meta_practica_01.dir/objects.a @CMakeFiles\meta_practica_01.dir\objects1.rsp
+C:\Users\Administrator\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\232.9921.42\bin\mingw\bin\g++.exe -g -Wl,--whole-archive CMakeFiles\meta_practica_01.dir/objects.a -Wl,--no-whole-archive -o meta_practica_01.exe -Wl,--out-implib,libmeta_practica_01.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\meta_practica_01.dir\linkLibs.rsp

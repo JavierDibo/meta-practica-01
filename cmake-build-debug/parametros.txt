@@ -9,7 +9,10 @@ algoritmo=4
 echo=true
 
 # Crear archivos log
-log=true
+log=false
+
+# Activa la paralelizacion
+pragma=false
 
 # Si 1 entonces diversifica siempre si 0 entonces intensifica
 porcentaje_oscilar=0.50
