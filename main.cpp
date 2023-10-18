@@ -10,7 +10,8 @@
 #include <iomanip>
 #include <filesystem>
 #include <set>
-#include <unordered_set>
+#include <omp.h>
+#include <unistd.h>
 
 // Typedefs
 
@@ -77,7 +78,7 @@ std::pair<movimiento, int>
 generar_vecinos(const vector &solucion, int tam, const matriz &flujo, const matriz &distancia,
                 const std::vector<movimiento> &lista_tabu, const int &semilla);
 
-[[maybe_unused]] void imprimir_solucion(const vector &sol);
+void imprimir_solucion(const vector &sol);
 
 bool condicion_estancamiento(const vector &registro_costes, const std::pair<vector, int> &mejor_local);
 
@@ -192,6 +193,7 @@ void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &a
 
     std::pair<vector, int> mejor_solucion = {vector(tamanno_matriz, 0), INT_MAX};
 
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, semilla, NUM_ITERACIONES_GRASP, archivo_datos, mejor_solucion)
     for (int iteracion = 0; iteracion < NUM_ITERACIONES_GRASP; ++iteracion) {
 
         vector solucion_inicial = algoritmo_greedy_aletatorizado(tamanno_matriz, flujo, distancia, semilla, iteracion);
@@ -199,6 +201,7 @@ void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &a
         std::pair<vector, int> solucion_mejorada = tabu_grasp(tamanno_matriz, flujo, distancia, archivo_datos,
                                                               solucion_inicial, semilla);
 
+#pragma omp critical
         if (solucion_mejorada.second < mejor_solucion.second) {
             mejor_solucion = solucion_mejorada;
         }

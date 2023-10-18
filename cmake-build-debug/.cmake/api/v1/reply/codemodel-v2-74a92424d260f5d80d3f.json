@@ -39,7 +39,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "meta_practica_01::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-meta_practica_01-Debug-6a4b3203bd3c00163f99.json",
+					"jsonFile" : "target-meta_practica_01-Debug-76200aa6c8ad5bec528f.json",
 					"name" : "meta_practica_01",
 					"projectIndex" : 0
 				}
@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "C:/Users/jfdg0/Desktop/Metaheuristicas/Practica 1/meta-practica-01/cmake-build-debug",
-		"source" : "C:/Users/jfdg0/Desktop/Metaheuristicas/Practica 1/meta-practica-01"
+		"build" : "C:/Users/Administrator/Documents/meta-practica-01/cmake-build-debug",
+		"source" : "C:/Users/Administrator/Documents/meta-practica-01"
 	},
 	"version" : 
 	{
