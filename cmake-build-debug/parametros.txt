@@ -14,12 +14,11 @@ log=true
 # Si 1 entonces diversifica siempre si 0 entonces intensifica
 porcentaje_oscilar=0.50
 
-datos=ford03.dat
-#,ford02.dat,ford03.dat,ford04.dat
-max_iteraciones=10000
+datos=ford01.dat,ford02.dat,ford03.dat,ford04.dat
+max_iteraciones=1000
 tenencia_tabu=9
 num_max_vecinos=90
 iteraciones_para_estancamiento=50
-iteracion_grasp=15
+iteracion_grasp=25
 ventana_grasp=5
 
