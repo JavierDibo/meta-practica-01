@@ -56,8 +56,7 @@ def main():
     alg = "grasp"
 
     # Directorio donde están los archivos CSV
-    directorio_entrada = (f"C:/Users/jfdg0/Desktop/Metaheuristicas/Practica "
-                          f"1/meta-practica-01/cmake-build-debug/logs/{alg}")
+    directorio_entrada = (f"../cmake-build-debug/logs/{alg}")
     # archivos están en otro lugar
     # Directorio para guardar las imágenes
     directorio_salida = f"./graficas/{alg}"

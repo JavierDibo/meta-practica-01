@@ -435,6 +435,7 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
         imprimir_resumen_semilla(semilla, coste_actual);
         std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
         std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        std::cout << "-----------------------------" << std::endl;
     }
 
     return std::make_pair(solucion_actual, coste_actual);
@@ -1164,7 +1165,8 @@ void purge_grasp_logs(const int &mejor, const int &semilla, const string &archiv
 
     // Construir la lista de nombres de archivos posibles
     for (int i = 0; i <= 100; i++) {
-        string filename = "logs/grasp/ford0" + num + "_grasp_" + std::to_string(i) + "_" + std::to_string(semilla) + ".csv";
+        string filename =
+                "logs/grasp/ford0" + num + "_grasp_" + std::to_string(i) + "_" + std::to_string(semilla) + ".csv";
 
         // Si i no es igual a "mejor", eliminamos el archivo
         if (i != mejor) {
@@ -1206,8 +1208,7 @@ void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &a
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
 
-#pragma omp critical
-    purge_grasp_logs(mejor, semilla, archivo_datos);
+    if (LOG) { purge_grasp_logs(mejor, semilla, archivo_datos); }
 
     if (ECHO) {
         std::cout << "Algoritmo GRASP: " << std::endl;
