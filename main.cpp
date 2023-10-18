@@ -823,7 +823,7 @@ inicializar_log_primero_mejor(int semilla, const std::string &nombre_archivo, co
     }
 
     if (archivo_log.is_open()) {
-        archivo_log << "Iteracion,Movimiento_i,Movimiento_j,Coste,Delta,Max_Iteraciones,Solucion\n";
+        archivo_log << "Iteracion,Movimiento_i,Movimiento_j,Coste solucion,Delta,Max_Iteraciones,Solucion\n";
     }
 
     return archivo_log;
