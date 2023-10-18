@@ -16,7 +16,7 @@ porcentaje_oscilar=0.50
 
 datos=ford01.dat,ford02.dat,ford03.dat,ford04.dat
 max_iteraciones=1000
-tenencia_tabu=9
+tenencia_tabu=7
 num_max_vecinos=90
 iteraciones_para_estancamiento=50
 iteracion_grasp=25

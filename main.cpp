@@ -10,6 +10,10 @@
 #include <iomanip>
 #include <filesystem>
 #include <set>
+#include <tuple>
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 
 // Typedefs
 
@@ -36,6 +40,10 @@ double PROBABILIDAD_OSCILAR;
 int INFINITO_POSITIVO = std::numeric_limits<int>::max();
 int INFINITO_NEGATIVO = std::numeric_limits<int>::min();
 int VENTANA_GRASP;
+int SOLUCION, FIRST = 0;
+int COSTO, SECOND = 1;
+int ARCHIVO_LOG, THIRD = 2;
+
 
 // Funciones
 
@@ -76,7 +84,7 @@ std::pair<movimiento, int>
 generar_vecinos(const vector &solucion, int tam, const matriz &flujo, const matriz &distancia,
                 const std::vector<movimiento> &lista_tabu, const int &semilla);
 
-void imprimir_solucion(const vector &sol);
+[[maybe_unused]] void imprimir_solucion(const vector &sol);
 
 bool condicion_estancamiento(const vector &registro_costes, const std::pair<vector, int> &mejor_local);
 
@@ -106,9 +114,6 @@ std::vector<movimiento> ordenar_vector_greedy(const vector &sumas, bool descendi
 
 std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos,
                                 const int &semilla);
-
-std::pair<vector, int> tabu_grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos,
-                                  const vector &solucion_inicial, const int &semilla);
 
 std::vector<int> algoritmo_greedy_aletatorizado(int tamanno_matriz, const matriz &flujo, const matriz &distancia,
                                                 const int &semilla, const int &mint) {
@@ -179,42 +184,13 @@ void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &dis
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
 
-    if (ECHO) { std::cout << "Coste: " << coste << std::endl; }
-    if (ECHO) { std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl; }
-}
-
-void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla) {
-
-    auto tiempo_inicio = std::chrono::high_resolution_clock::now();
-
-    if (ECHO) { std::cout << "Algoritmo GRASP: " << std::endl; }
-
-    std::pair<vector, int> mejor_solucion = {vector(tamanno_matriz, 0), INT_MAX};
-
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, semilla, NUM_ITERACIONES_GRASP, archivo_datos, mejor_solucion)
-    for (int iteracion = 0; iteracion < NUM_ITERACIONES_GRASP; ++iteracion) {
-
-        vector solucion_inicial = algoritmo_greedy_aletatorizado(tamanno_matriz, flujo, distancia, semilla, iteracion);
-
-        std::pair<vector, int> solucion_mejorada = tabu_grasp(tamanno_matriz, flujo, distancia, archivo_datos,
-                                                              solucion_inicial, semilla);
-
-#pragma omp critical
-        if (solucion_mejorada.second < mejor_solucion.second) {
-            mejor_solucion = solucion_mejorada;
-        }
-    }
-
-    imprimir_resumen_semilla(semilla, mejor_solucion.second);
-
-    auto tiempo_fin = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-
     if (ECHO) {
+        std::cout << "Coste: " << coste << std::endl;
         std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
-        std::cout << "---------------------------------------" << std::endl;
     }
 }
+
+void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla);
 
 int main(int argc, char *argv[]) {
 
@@ -233,7 +209,9 @@ int main(int argc, char *argv[]) {
 
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-    std::cout << "Tiempo TOTAL de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+    if (ECHO) {
+        std::cout << "Tiempo TOTAL de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+    }
 
     return 0;
 }
@@ -242,8 +220,6 @@ std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &dista
                                 const int &semilla) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
-
-    if (ECHO) { std::cout << "Algoritmo Tabu: " << std::endl; }
 
     // Solucion inicial aleatoria
     vector solucion_inicial = vector_aleatorio(tamanno_matriz, semillas[0]);
@@ -376,12 +352,16 @@ std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &dista
 
     if (LOG) { log_file.close(); }
 
-    if (ECHO) { imprimir_resumen_semilla(semilla, mejor_local.second); }
-
-
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-    std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+
+#pragma omp critical
+    if (ECHO) {
+        std::cout << "Algoritmo Tabu: " << std::endl;
+        imprimir_resumen_semilla(semilla, mejor_local.second);
+        std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        std::cout << "----------------------------------------" << std::endl;
+    }
 
     return mejor_local;
 }
@@ -391,8 +371,6 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
                                          const string &archivo_datos, const int &semilla) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
-
-    if (ECHO) { std::cout << "Algoritmo primero el mejor: " << std::endl; }
 
     vector solucion_inicial = vector_aleatorio(tamanno_matriz, semilla);
 
@@ -450,11 +428,14 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
 
     if (LOG) { log_file.close(); }
 
-    if (ECHO) { imprimir_resumen_semilla(semilla, coste_actual); }
-
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-    std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+
+    if (ECHO) {
+        std::cout << "Algoritmo primero el mejor: " << std::endl;
+        imprimir_resumen_semilla(semilla, coste_actual);
+        std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+    }
 
     return std::make_pair(solucion_actual, coste_actual);
 }
@@ -475,6 +456,7 @@ void lanzar_algoritmo(mapa parametros) {
                 primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
             }
         } else if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas)
             for (const auto &semilla: semillas) {
                 tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
             }
@@ -987,13 +969,15 @@ void escribir_log_tabu(std::ofstream &archivo_log, int iteraciones, movimiento m
     archivo_log << "\n";
 }
 
-std::ofstream inicializar_log_grasp(int semilla, const std::string &nombre_archivo, const std::string &algoritmo) {
+std::ofstream
+inicializar_log_grasp(int semilla, const std::string &nombre_archivo, const std::string &algoritmo, const int &mint) {
 
     std::filesystem::path path(nombre_archivo);
     std::string nombre = path.stem().string();
 
     std::string nombre_log =
-            "logs/" + algoritmo + "/" + nombre + "_" + algoritmo + "_" + std::to_string(semilla) + ".csv";
+            "logs/" + algoritmo + "/" + nombre + "_" + algoritmo + "_" + std::to_string(mint) + "_" +
+            std::to_string(semilla) + ".csv";
 
     std::filesystem::path directorio = std::filesystem::path(nombre_log).parent_path();
     if (!std::filesystem::exists(directorio)) {
@@ -1010,7 +994,7 @@ std::ofstream inicializar_log_grasp(int semilla, const std::string &nombre_archi
     if (archivo_log.is_open()) {
         archivo_log
                 << "Iteracion,Movimiento i,Movimiento j,Coste solucion,Delta,Etiqueta,Coste mejor local,Solucion,"
-                   "Max vecinos,Iteraciones estancamiento,Oscilacion,Tenencia,Iteraciones Max,\n";
+                   "Max vecinos,Iteraciones estancamiento,Oscilacion,Tenencia,Iteraciones Max,Iteraciones GRASP,Ventana GRASP\n";
     }
 
     return archivo_log;
@@ -1027,13 +1011,20 @@ void escribir_log_grasp(std::ofstream &archivo_log, int iteraciones, movimiento 
     }
 
     archivo_log << "," << NUMERO_MAX_VECINOS << "," << ITERACIONES_PARA_ESTANCAMIENTO << ","
-                << PROBABILIDAD_OSCILAR << "," << TENENCIA_TABU << "," << MAX_ITERACIONES;
+                << PROBABILIDAD_OSCILAR << "," << TENENCIA_TABU << "," << MAX_ITERACIONES << ","
+                << NUM_ITERACIONES_GRASP << "," << VENTANA_GRASP;
 
     archivo_log << "\n";
 }
 
 std::pair<vector, int> tabu_grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos,
-                                  const vector &solucion_inicial, const int &semilla) {
+                                  const vector &solucion_inicial, const int &semilla, const int &mint) {
+
+    // Logging
+    std::ofstream log_file;
+    if (LOG) {
+        log_file = inicializar_log_grasp(semilla, archivo_datos, "grasp", mint);
+    }
 
     // Iniciacion de variables para el algoritmo
     vector solucion_actual = solucion_inicial;
@@ -1052,10 +1043,6 @@ std::pair<vector, int> tabu_grasp(int tamanno_matriz, matriz &flujo, matriz &dis
 
     // Empezar en indice aleatorio sin saltarse ninguno
     vector indices = vector_aleatorio(tamanno_matriz, semilla);
-
-    // Logging
-    std::ofstream log_file;
-    if (LOG) { log_file = inicializar_log_grasp(semilla, archivo_datos, "grasp"); }
 
     while (iteraciones < MAX_ITERACIONES) {
 
@@ -1108,8 +1095,7 @@ std::pair<vector, int> tabu_grasp(int tamanno_matriz, matriz &flujo, matriz &dis
 
                     if (delta_actual < 0) {
                         realizar_movimiento(solucion_actual, movimiento_actual, lista_tabu_implicita,
-                                            lista_tabu_explicita,
-                                            memoria_largo_plazo, iteraciones);
+                                            lista_tabu_explicita, memoria_largo_plazo, iteraciones);
 
                         coste_actual += delta_actual;
 
@@ -1161,7 +1147,72 @@ std::pair<vector, int> tabu_grasp(int tamanno_matriz, matriz &flujo, matriz &dis
         }
     }
 
-    if (LOG) { log_file.close(); }
+
+    if (LOG) {
+        log_file.close();
+    }
 
     return mejor_local;
+}
+
+void purge_grasp_logs(const int &mejor, const int &semilla, const string &archivo_datos) {
+    // Obtener el valor de num a partir de archivo_datos
+
+    size_t start = archivo_datos.find("ford0") + 5;
+    size_t end = archivo_datos.find(".dat");
+    string num = archivo_datos.substr(start, end - start);
+
+    // Construir la lista de nombres de archivos posibles
+    for (int i = 0; i <= 100; i++) {
+        string filename = "logs/grasp/ford0" + num + "_grasp_" + std::to_string(i) + "_" + std::to_string(semilla) + ".csv";
+
+        // Si i no es igual a "mejor", eliminamos el archivo
+        if (i != mejor) {
+            if (std::filesystem::exists(filename)) {
+                std::filesystem::remove(filename);
+            }
+        } else {
+            // Renombrar el archivo que coincide con "mejor"
+            string newFilename = "logs/grasp/ford0" + num + "_grasp_" + std::to_string(semilla) + ".csv";
+            if (std::filesystem::exists(filename)) {
+                std::filesystem::rename(filename, newFilename);
+            }
+        }
+    }
+}
+
+void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla) {
+
+    auto tiempo_inicio = std::chrono::high_resolution_clock::now();
+
+    std::pair<vector, int> mejor_solucion = {vector(tamanno_matriz, 0), INT_MAX};
+    int mejor = -1;
+
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, semilla, NUM_ITERACIONES_GRASP, archivo_datos, mejor_solucion, mejor)
+    for (int iteracion = 0; iteracion < NUM_ITERACIONES_GRASP; ++iteracion) {
+
+        vector solucion_inicial = algoritmo_greedy_aletatorizado(tamanno_matriz, flujo, distancia, semilla,
+                                                                 iteracion);
+
+        std::pair<vector, int> solucion_mejorada = tabu_grasp(tamanno_matriz, flujo, distancia, archivo_datos,
+                                                              solucion_inicial, semilla, iteracion);
+#pragma omp critical
+        if (solucion_mejorada.second < mejor_solucion.second) {
+            mejor_solucion = solucion_mejorada;
+            mejor = iteracion;
+        }
+    }
+
+    auto tiempo_fin = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+
+#pragma omp critical
+    purge_grasp_logs(mejor, semilla, archivo_datos);
+
+    if (ECHO) {
+        std::cout << "Algoritmo GRASP: " << std::endl;
+        imprimir_resumen_semilla(semilla, mejor_solucion.second);
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        std::cout << "---------------------------------------" << std::endl;
+    }
 }
