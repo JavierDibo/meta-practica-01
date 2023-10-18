@@ -1,9 +1,9 @@
 # Uso: semilla=1 -- semilla=3293,423,4166 -- semilla= -- etc
 semilla=77646884,47764688,84776468,88477646,68847764
 
-# Algoritmos implementados: greedy || 1 || pm || 2 || tabu || 3
+# Algoritmos implementados: greedy || 1 || pm || 2 || tabu || 3 || grasp || 4
 # Uso: algoritmo=1 -- algoritmo=tabu -- etc
-algoritmo=2
+algoritmo=4
 
 # Imprimir por consola
 echo=true
@@ -11,11 +11,15 @@ echo=true
 # Crear archivos log
 log=true
 
-datos=ford01.dat,ford02.dat,ford03.dat,ford04.dat
-max_iteraciones=1000
-tenencia_tabu=7
-num_max_vecinos=90
-iteraciones_para_estancamiento=50
-
 # Si 1 entonces diversifica siempre si 0 entonces intensifica
 porcentaje_oscilar=0.50
+
+datos=ford03.dat
+#,ford02.dat,ford03.dat,ford04.dat
+max_iteraciones=10000
+tenencia_tabu=9
+num_max_vecinos=90
+iteraciones_para_estancamiento=50
+iteracion_grasp=15
+ventana_grasp=5
+
