@@ -1,4 +1,3 @@
-#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -27,7 +26,6 @@ bool LOG = false;
 int TENENCIA_TABU = 0;
 std::vector<string> ARCHIVOS_DATOS;
 int ITERACIONES_PARA_ESTANCAMIENTO;
-double PORCENTAJE_ESTANCAMIENTO;
 double PROBABILIDAD_OSCILAR;
 int MAX_ITERACIONES = 0;
 int INTENSIFICAR = 1;
@@ -48,12 +46,9 @@ void leer_matrices(const string &nombre_archivo, int &tamanno_matriz, matriz &fl
 
 int calcular_coste_solucion(const vector &vec, const matriz &flujo, const matriz &distancia);
 
-std::ofstream inicializar_log(int semilla, const std::string &nombre_archivo, const std::string &algoritmo);
-
 int delta_coste(const vector &vec, const matriz &flujo, const matriz &distancia, movimiento mov);
 
-void
-imprimir_resumen_semilla(const int &semilla, const int &iteraciones, const int &coste_actual, const vector &solucion);
+void imprimir_resumen_semilla(const int &semilla, const int &coste_actual);
 
 void lanzar_algoritmo(mapa parametros);
 
@@ -95,10 +90,18 @@ vector diversificar(const matriz &memoria_largo_plazo, const int &semilla, const
 
 vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const int &veces, const int &tam);
 
-std::vector<movimiento> ordenar_vector_greedy(const vector &sumas, bool descending = false);
+std::ofstream
+inicializar_log_primero_mejor(int semilla, const std::string &nombre_archivo, const std::string &algoritmo);
 
-void escribir_log(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
-                  const vector &DLB, const string &tag);
+void escribir_log_primero_mejor(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
+                                const vector &solucion);
+
+std::ofstream inicializar_log_tabu(int semilla, const std::string &nombre_archivo, const std::string &algoritmo);
+
+void escribir_log_tabu(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
+                       const string &tag, const int &coste_mejor_local, const vector &solucion);
+
+std::vector<movimiento> ordenar_vector_greedy(const vector &sumas, bool descending = false);
 
 void primero_mejor_DLB(int tamanno_matriz, const matriz &flujo, const matriz &distancia, const string &archivo_datos);
 
@@ -150,7 +153,7 @@ void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string
 
         // Logging
         std::ofstream log_file;
-        if (LOG) { log_file = inicializar_log(semilla, archivo_datos, "tabu"); }
+        if (LOG) { log_file = inicializar_log_tabu(semilla, archivo_datos, "tabu"); }
 
         while (iteraciones < MAX_ITERACIONES) {
 
@@ -217,8 +220,8 @@ void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string
                             mejora = true;
 
                             if (LOG) {
-                                escribir_log(log_file, iteraciones, movimiento_actual, coste_actual, delta_actual,
-                                             DLB, "DLB");
+                                escribir_log_tabu(log_file, iteraciones, movimiento_actual, coste_actual, delta_actual,
+                                                  "DLB", mejor_local.second, solucion_actual);
                             }
 
                             actualizar_registro_costes(coste_actual, registro_costes);
@@ -250,12 +253,15 @@ void tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string
 
             actualizar_registro_costes(coste_actual, registro_costes);
 
-            if (LOG) { escribir_log(log_file, iteraciones, mejor_vecino.first, coste_actual, delta, DLB, "EMP"); }
+            if (LOG) {
+                escribir_log_tabu(log_file, iteraciones, mejor_vecino.first, coste_actual, delta, "Empeoramiento",
+                                  mejor_local.second, solucion_actual);
+            }
         }
 
         if (LOG) { log_file.close(); }
 
-        if (ECHO) { imprimir_resumen_semilla(semilla, iteraciones, mejor_local.second, mejor_local.first); }
+        if (ECHO) { imprimir_resumen_semilla(semilla, mejor_local.second); }
     }
 
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
@@ -288,7 +294,7 @@ void primero_mejor_DLB(int tamanno_matriz, const matriz &flujo, const matriz &di
         std::shuffle(indices.begin(), indices.end(), random);
 
         std::ofstream log_file;
-        if (LOG) { log_file = inicializar_log(semilla, archivo_datos, "pm"); }
+        if (LOG) { log_file = inicializar_log_primero_mejor(semilla, archivo_datos, "pm"); }
 
         while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
             for (int index: indices) {
@@ -312,7 +318,8 @@ void primero_mejor_DLB(int tamanno_matriz, const matriz &flujo, const matriz &di
                         mejora = true;
 
                         if (LOG) {
-                            escribir_log(log_file, iteraciones, movimiento_actual, coste_actual, delta, DLB, "");
+                            escribir_log_primero_mejor(log_file, iteraciones, movimiento_actual, coste_actual, delta,
+                                                       solucion_actual);
                         }
                         break;
                     }
@@ -326,7 +333,7 @@ void primero_mejor_DLB(int tamanno_matriz, const matriz &flujo, const matriz &di
 
         if (LOG) { log_file.close(); }
 
-        if (ECHO) { imprimir_resumen_semilla(semilla, iteraciones, coste_actual, solucion_actual); }
+        if (ECHO) { imprimir_resumen_semilla(semilla, coste_actual); }
     }
 
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
@@ -444,9 +451,8 @@ mapa lectura_parametros(const string &nombre_archivo) {
         NUMERO_MAX_VECINOS = std::stoi(parametros["num_max_vecinos"]);
     }
 
-    if (parametros.find("porcetanje_estancamiento") != parametros.end()) {
-        PORCENTAJE_ESTANCAMIENTO = std::stof(parametros["porcetanje_estancamiento"]);
-        ITERACIONES_PARA_ESTANCAMIENTO = static_cast<int>(std::round(MAX_ITERACIONES * PORCENTAJE_ESTANCAMIENTO));
+    if (parametros.find("iteraciones_para_estancamiento") != parametros.end()) {
+        ITERACIONES_PARA_ESTANCAMIENTO = std::stoi(parametros["iteraciones_para_estancamiento"]);
     }
 
     if (parametros.find("datos") != parametros.end()) {
@@ -510,45 +516,7 @@ int calcular_coste_solucion(const vector &vec, const matriz &flujo, const matriz
     return coste;
 }
 
-std::ofstream inicializar_log(int semilla, const std::string &nombre_archivo, const std::string &algoritmo) {
-
-    std::filesystem::path path(nombre_archivo);
-    std::string nombre = path.stem().string();
-
-    std::string nombre_log =
-            "logs/" + algoritmo + "/" + nombre + "_" + algoritmo + "_" + std::to_string(semilla) + ".csv";
-
-    std::filesystem::path directorio = std::filesystem::path(nombre_log).parent_path();
-    if (!std::filesystem::exists(directorio)) {
-        std::filesystem::create_directories(directorio);
-    }
-
-    std::ofstream archivo_log(nombre_log);
-
-    if (!archivo_log.is_open()) {
-        std::cerr << "inicializar_log::no se pudo abrir el archivo " + nombre_log << std::endl;
-        throw;
-    }
-
-    if (archivo_log.is_open()) {
-        archivo_log << "Iteracion,Movimiento_i,Movimiento_j,Coste Actual,Delta,Tag,DLB\n";
-    }
-
-    return archivo_log;
-}
-
-void escribir_log(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
-                  const vector &DLB, const string &tag) {
-
-    archivo_log << iteraciones << "," << mov.first << "," << mov.second << "," << coste << "," << delta
-                << "," + tag + ",";
-
-    for (int dato: DLB) {
-        archivo_log << dato;
-    }
-
-    archivo_log << "\n";
-}
+////Aqui
 
 std::vector<movimiento> ordenar_vector_greedy(const vector &sumas, bool descending) {
     std::vector<movimiento> sumas_indizadas;
@@ -584,12 +552,9 @@ int delta_coste(const vector &vec, const matriz &flujo, const matriz &distancia,
     return delta;
 }
 
-void
-imprimir_resumen_semilla(const int &semilla, const int &iteraciones, const int &coste_actual, const vector &solucion) {
+void imprimir_resumen_semilla(const int &semilla, const int &coste_actual) {
     std::cout << "Semilla: " << semilla << std::endl;
-    std::cout << "Numero de iteraciones: " << iteraciones << std::endl;
     std::cout << "Coste de la solucion para esta semilla: " << coste_actual << std::endl;
-    imprimir_solucion(solucion);
     std::cout << "---------------------------------------" << std::endl;
 }
 
@@ -771,7 +736,7 @@ void limpiar_memorias(std::vector<movimiento> &lista_tabu_implicita, matriz &lis
 }
 
 vector iniciar_registro_costes() {
-    int tam = static_cast<int>(MAX_ITERACIONES * PORCENTAJE_ESTANCAMIENTO);
+    int tam = static_cast<int>(ITERACIONES_PARA_ESTANCAMIENTO);
     vector vec(tam, INFINITO_NEGATIVO);
     return vec;
 }
@@ -834,4 +799,90 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
     }
 
     return resultado;
+}
+
+std::ofstream
+inicializar_log_primero_mejor(int semilla, const std::string &nombre_archivo, const std::string &algoritmo) {
+
+    std::filesystem::path path(nombre_archivo);
+    std::string nombre = path.stem().string();
+
+    std::string nombre_log =
+            "logs/" + algoritmo + "/" + nombre + "_" + algoritmo + "_" + std::to_string(semilla) + ".csv";
+
+    std::filesystem::path directorio = std::filesystem::path(nombre_log).parent_path();
+    if (!std::filesystem::exists(directorio)) {
+        std::filesystem::create_directories(directorio);
+    }
+
+    std::ofstream archivo_log(nombre_log);
+
+    if (!archivo_log.is_open()) {
+        std::cerr << "inicializar_log::no se pudo abrir el archivo " + nombre_log << std::endl;
+        throw;
+    }
+
+    if (archivo_log.is_open()) {
+        archivo_log << "Iteracion,Movimiento_i,Movimiento_j,Coste,Delta,Max_Iteraciones,Solucion\n";
+    }
+
+    return archivo_log;
+}
+
+void escribir_log_primero_mejor(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
+                                const vector &solucion) {
+
+    archivo_log << iteraciones << "," << mov.first << "," << mov.second << "," << coste << "," << delta
+                << "," << MAX_ITERACIONES << ",";
+
+    for (const auto dato: solucion) {
+        archivo_log << dato << " ";
+    }
+
+    archivo_log << "\n";
+}
+
+std::ofstream inicializar_log_tabu(int semilla, const std::string &nombre_archivo, const std::string &algoritmo) {
+
+    std::filesystem::path path(nombre_archivo);
+    std::string nombre = path.stem().string();
+
+    std::string nombre_log =
+            "logs/" + algoritmo + "/" + nombre + "_" + algoritmo + "_" + std::to_string(semilla) + ".csv";
+
+    std::filesystem::path directorio = std::filesystem::path(nombre_log).parent_path();
+    if (!std::filesystem::exists(directorio)) {
+        std::filesystem::create_directories(directorio);
+    }
+
+    std::ofstream archivo_log(nombre_log);
+
+    if (!archivo_log.is_open()) {
+        std::cerr << "inicializar_log::no se pudo abrir el archivo " + nombre_log << std::endl;
+        throw;
+    }
+
+    if (archivo_log.is_open()) {
+        archivo_log
+                << "Iteracion,Movimiento i,Movimiento j,Coste solucion,Delta,Etiqueta,Coste mejor local,Solucion,"
+                   "Max vecinos,Iteraciones estancamiento,Oscilacion,Tenencia,Iteraciones Max,\n";
+    }
+
+    return archivo_log;
+}
+
+void escribir_log_tabu(std::ofstream &archivo_log, int iteraciones, movimiento mov, int coste, int delta,
+                       const string &tag, const int &coste_mejor_local, const vector &solucion) {
+
+    archivo_log << iteraciones << "," << mov.first << "," << mov.second << "," << coste << "," << delta
+                << "," << tag << "," << coste_mejor_local << ",";
+
+    for (const auto dato: solucion) {
+        archivo_log << dato << " ";
+    }
+
+    archivo_log << "," << NUMERO_MAX_VECINOS << "," << ITERACIONES_PARA_ESTANCAMIENTO << ","
+                << PROBABILIDAD_OSCILAR << "," << TENENCIA_TABU << "," << MAX_ITERACIONES;
+
+    archivo_log << "\n";
 }
