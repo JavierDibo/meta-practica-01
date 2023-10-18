@@ -772,6 +772,26 @@
 			"isCMake" : true,
 			"isExternal" : true,
 			"path" : "C:/Users/jfdg0/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/Platform/Windows-GNU-CXX-ABI.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/jfdg0/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/FindOpenMP.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/jfdg0/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/CMakeParseImplicitLinkInfo.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/jfdg0/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/jfdg0/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/FindPackageMessage.cmake"
 		}
 	],
 	"kind" : "cmakeFiles",

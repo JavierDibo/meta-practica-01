@@ -13,11 +13,15 @@
 	{
 		"commands" : 
 		[
-			"add_executable"
+			"add_executable",
+			"set_property",
+			"find_package",
+			"target_link_libraries"
 		],
 		"files" : 
 		[
-			"CMakeLists.txt"
+			"CMakeLists.txt",
+			"C:/Users/jfdg0/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/FindOpenMP.cmake"
 		],
 		"nodes" : 
 		[
@@ -29,6 +33,28 @@
 				"file" : 0,
 				"line" : 6,
 				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 8,
+				"parent" : 0
+			},
+			{
+				"file" : 1,
+				"parent" : 2
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 618,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
 			}
 		]
 	},
@@ -39,6 +65,10 @@
 			[
 				{
 					"fragment" : "-g -fdiagnostics-color=always"
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "-fopenmp"
 				}
 			],
 			"language" : "CXX",
@@ -68,6 +98,16 @@
 			{
 				"fragment" : "",
 				"role" : "flags"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "C:\\Users\\jfdg0\\AppData\\Local\\Programs\\CLion\\bin\\mingw\\lib\\gcc\\x86_64-w64-mingw32\\13.1.0\\libgomp.dll.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "C:\\Users\\jfdg0\\AppData\\Local\\Programs\\CLion\\bin\\mingw\\x86_64-w64-mingw32\\lib\\libmingwthrd.a",
+				"role" : "libraries"
 			},
 			{
 				"fragment" : "-lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32",
