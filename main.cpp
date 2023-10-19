@@ -22,29 +22,32 @@ using movimiento = std::pair<int, int>;
 using matriz = std::vector<std::vector<int>>;
 using mapa = std::map<string, string>;
 
+// Definiciones
+
+#define ALGORITMO_GREEDY "GREEDY"
+#define ALGORITMO_PRIMERO_MEJOR "PRIMERO_MEJOR"
+#define ALGORITMO_TABU "TABU"
+#define ALGORITMO_GRASP "GRASP"
+
 // Variables globales
 
 vector semillas;
 bool ECHO = false;
 bool LOG = false;
-bool PRAGMA;
+[[maybe_unused]] bool PRAGMA;
 bool STATS;
 int TENENCIA_TABU = 0;
-std::vector<string> ARCHIVOS_DATOS;
 int ITERACIONES_PARA_ESTANCAMIENTO;
 int NUM_ITERACIONES_GRASP;
 int MAX_ITERACIONES = 0;
 int INTENSIFICAR = 1;
 int DIVERSIFICAR = 0;
 int NUMERO_MAX_VECINOS;
-double PROBABILIDAD_OSCILAR;
 int INFINITO_POSITIVO = std::numeric_limits<int>::max();
 int INFINITO_NEGATIVO = std::numeric_limits<int>::min();
 int VENTANA_GRASP;
-int SOLUCION, FIRST = 0;
-int COSTO, SECOND = 1;
-int ARCHIVO_LOG, THIRD = 2;
-
+double PROBABILIDAD_OSCILAR;
+std::vector<string> ARCHIVOS_DATOS;
 
 // Funciones
 
@@ -502,6 +505,20 @@ double calcular_coeficiente_variacion(const std::vector<double> &valores) {
     return coeficienteVariacion;
 }
 
+void actualizar_datos_estadisticos(const int &coste, int &menor_coste, std::vector<double> &valores) {
+    if (coste < menor_coste)
+        menor_coste = coste;
+    valores.push_back(coste);
+}
+
+void imprimir_datos_estadisticos(const string &archivo_datos, mapa parametros, const std::vector<double> &valores,
+                                 const int &coste) {
+    std::cout << archivo_datos << " con algoritmo " << parametros["algoritmo"] << std::endl;
+    std::cout << "Media: " << calcular_media(valores) << " -- Mejor coste: " << coste
+              << " -- Desviacion tipica: "
+              << calcular_desviacion_tipica(valores) << " -- Coeficiente de variacion: "
+              << calcular_coeficiente_variacion(valores) << std::endl;
+}
 
 void lanzar_algoritmo(mapa parametros) {
 
@@ -515,39 +532,30 @@ void lanzar_algoritmo(mapa parametros) {
 
         leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
 
-        if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
+        string algoritmo = parametros["algoritmo"];
+
+        if (algoritmo == ALGORITMO_GREEDY) {
             algoritmo_greedy(tamanno_matriz, flujo, distancia);
-        } else if (parametros["algoritmo"] == "pm" || parametros["algoritmo"] == "2") {
+        } else if (algoritmo == ALGORITMO_PRIMERO_MEJOR) {
             for (const auto &semilla: semillas) {
                 coste = primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla).second;
-                if (coste < menor_coste)
-                    menor_coste = coste;
-                valores.push_back(coste);
+                actualizar_datos_estadisticos(coste, menor_coste, valores);
             }
-        } else if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
+        } else if (algoritmo == ALGORITMO_TABU) {
 #pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas, coste, menor_coste, valores) if(PRAGMA)
             for (const auto &semilla: semillas) {
                 coste = tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla).second;
-                if (coste < menor_coste)
-                    menor_coste = coste;
-                valores.push_back(coste);
+                actualizar_datos_estadisticos(coste, menor_coste, valores);
             }
-        } else if (parametros["algoritmo"] == "grasp" || parametros["algoritmo"] == "4") {
+        } else if (algoritmo == ALGORITMO_GRASP) {
             for (const auto &semilla: semillas) {
                 coste = grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla).second;
-                if (coste < menor_coste)
-                    menor_coste = coste;
-                valores.push_back(coste);
+                actualizar_datos_estadisticos(coste, menor_coste, valores);
             }
         }
 
-
         if (STATS) {
-            std::cout << archivo_datos << " con algoritmo " << parametros["algoritmo"] << std::endl;
-            std::cout << "Media: " << calcular_media(valores) << " -- Mejor coste: " << coste
-                      << " -- Desviacion tipica: "
-                      << calcular_desviacion_tipica(valores) << " -- Coeficiente de variacion: "
-                      << calcular_coeficiente_variacion(valores) << std::endl;
+            imprimir_datos_estadisticos(archivo_datos, parametros, valores, coste);
         }
     }
 }
@@ -588,6 +596,25 @@ mapa lectura_parametros(const string &nombre_archivo) {
         string seed;
         while (std::getline(ss, seed, ',')) {
             semillas.push_back(std::stoi(seed));
+        }
+    }
+
+    if (parametros.find("algoritmo") != parametros.end()) {
+
+        if (parametros["algoritmo"] == "1" || parametros["algoritmo"] == "greedy") {
+            parametros["algoritmo"] = "GREEDY";
+        }
+
+        if (parametros["algoritmo"] == "2" || parametros["algoritmo"] == "pm") {
+            parametros["algoritmo"] = "PRIMERO_MEJOR";
+        }
+
+        if (parametros["algoritmo"] == "3" || parametros["algoritmo"] == "tabu") {
+            parametros["algoritmo"] = "TABU";
+        }
+
+        if (parametros["algoritmo"] == "4" || parametros["algoritmo"] == "grasp") {
+            parametros["algoritmo"] = "GRASP";
         }
     }
 
