@@ -28,6 +28,7 @@ vector semillas;
 bool ECHO = false;
 bool LOG = false;
 bool PRAGMA;
+bool STATS;
 int TENENCIA_TABU = 0;
 std::vector<string> ARCHIVOS_DATOS;
 int ITERACIONES_PARA_ESTANCAMIENTO;
@@ -190,7 +191,8 @@ void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &dis
     }
 }
 
-void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla);
+std::pair<vector, int>
+grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla);
 
 int main(int argc, char *argv[]) {
 
@@ -441,6 +443,66 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
     return std::make_pair(solucion_actual, coste_actual);
 }
 
+double calcular_desviacion_tipica(const std::vector<double> &valores) {
+    int n = valores.size();
+    if (n == 0) {
+        // Manejo de error: el vector está vacío
+        std::cerr << "Error: El vector de valores está vacío." << std::endl;
+        return 0.0;
+    }
+
+    // Paso 1: Calcular la media
+    double suma = 0.0;
+    for (const double &valor: valores) {
+        suma += valor;
+    }
+    double media = suma / n;
+
+    // Paso 2: Calcular la suma de las diferencias al cuadrado
+    double sumaDiferenciasAlCuadrado = 0.0;
+    for (const double &valor: valores) {
+        double diferencia = valor - media;
+        sumaDiferenciasAlCuadrado += diferencia * diferencia;
+    }
+
+    // Paso 3: Calcular la desviación típica
+    double desviacionTipica = std::sqrt(sumaDiferenciasAlCuadrado / n);
+
+    return desviacionTipica;
+}
+
+double calcular_media(const std::vector<double> &valores) {
+    int n = valores.size();
+    if (n == 0) {
+        // Manejo de error: el vector está vacío
+        std::cerr << "Error: El vector de valores está vacío." << std::endl;
+        return 0.0;
+    }
+
+    double suma = 0.0;
+    for (const double &valor: valores) {
+        suma += valor;
+    }
+
+    double media = suma / n;
+    return media;
+}
+
+double calcular_coeficiente_variacion(const std::vector<double> &valores) {
+    double desviacion = calcular_desviacion_tipica(valores);
+    double media = calcular_media(valores);
+
+    if (media == 0.0) {
+        // Manejo de error: Evitar división por cero
+        std::cerr << "Error: La media es igual a cero." << std::endl;
+        return 0.0;
+    }
+
+    double coeficienteVariacion = (desviacion / media) * 100.0;
+    return coeficienteVariacion;
+}
+
+
 void lanzar_algoritmo(mapa parametros) {
 
     int tamanno_matriz;
@@ -448,23 +510,44 @@ void lanzar_algoritmo(mapa parametros) {
 
     for (const auto &archivo_datos: ARCHIVOS_DATOS) {
 
+        std::vector<double> valores;
+        int coste, menor_coste = INFINITO_POSITIVO;
+
         leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
 
         if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
             algoritmo_greedy(tamanno_matriz, flujo, distancia);
         } else if (parametros["algoritmo"] == "pm" || parametros["algoritmo"] == "2") {
             for (const auto &semilla: semillas) {
-                primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
+                coste = primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla).second;
+                if (coste < menor_coste)
+                    menor_coste = coste;
+                valores.push_back(coste);
             }
         } else if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas) if(PRAGMA)
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas, coste, menor_coste, valores) if(PRAGMA)
             for (const auto &semilla: semillas) {
-                tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
+                coste = tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla).second;
+                if (coste < menor_coste)
+                    menor_coste = coste;
+                valores.push_back(coste);
             }
         } else if (parametros["algoritmo"] == "grasp" || parametros["algoritmo"] == "4") {
             for (const auto &semilla: semillas) {
-                grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
+                coste = grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla).second;
+                if (coste < menor_coste)
+                    menor_coste = coste;
+                valores.push_back(coste);
             }
+        }
+
+
+        if (STATS) {
+            std::cout << archivo_datos << " con algoritmo " << parametros["algoritmo"] << std::endl;
+            std::cout << "Media: " << calcular_media(valores) << " -- Mejor coste: " << coste
+                      << " -- Desviacion tipica: "
+                      << calcular_desviacion_tipica(valores) << " -- Coeficiente de variacion: "
+                      << calcular_coeficiente_variacion(valores) << std::endl;
         }
     }
 }
@@ -555,6 +638,10 @@ mapa lectura_parametros(const string &nombre_archivo) {
 
     if (parametros.find("pragma") != parametros.end()) {
         PRAGMA = (parametros["pragma"] == "true");
+    }
+
+    if (parametros.find("statistics") != parametros.end()) {
+        STATS = (parametros["statistics"] == "true");
     }
 
     return parametros;
@@ -1187,7 +1274,8 @@ void purge_grasp_logs(const int &mejor, const int &semilla, const string &archiv
     }
 }
 
-void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla) {
+std::pair<vector, int>
+grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
@@ -1220,4 +1308,6 @@ void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &a
         std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
         std::cout << "---------------------------------------" << std::endl;
     }
+
+    return mejor_solucion;
 }
