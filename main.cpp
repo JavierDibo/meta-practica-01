@@ -505,28 +505,27 @@ double calcular_coeficiente_variacion(const std::vector<double> &valores) {
 }
 
 void
-actualizar_datos_estadisticos(const int &coste, int &menor_coste, double &menor_tiempo, std::vector<double> &valores,
+actualizar_datos_estadisticos(const int &coste, int &menor_coste, double &tiempo_total, std::vector<double> &valores,
                               double tiempo,
                               std::vector<double> &tiempos) {
     if (coste < menor_coste)
         menor_coste = coste;
-    if (tiempo < menor_tiempo)
-        menor_tiempo = tiempo;
+    tiempo_total += tiempo;
     valores.push_back(coste);
     tiempos.push_back(tiempo);
 }
 
 void imprimir_datos_estadisticos(const string &archivo_datos, mapa parametros, const std::vector<double> &valores,
-                                 const int &mejor_coste, const double &mejor_tiempo,
+                                 const int &mejor_coste, const double &tiempo_total,
                                  const std::vector<double> &tiempos) {
     std::cout << archivo_datos << " con algoritmo " << parametros["algoritmo"] << std::endl;
-    std::cout << "Media mejor_coste: " << calcular_media(valores) << " -- Mejor mejor_coste: " << mejor_coste
-              << " -- Desviacion tipica mejor_coste: "
-              << calcular_desviacion_tipica(valores) << " -- Coeficiente de variacion mejor_coste: ";
+    std::cout << "Media coste: " << calcular_media(valores) << " -- Mejor coste: " << mejor_coste
+              << " -- Desviacion tipica coste: "
+              << calcular_desviacion_tipica(valores) << " -- Coeficiente de variacion coste: ";
 
     printf("%.2f%%\n", calcular_coeficiente_variacion(valores));
 
-    std::cout << "Media tiempos: " << calcular_media(tiempos) << " -- Mejor tiempo: " << mejor_tiempo
+    std::cout << "Media tiempos: " << calcular_media(tiempos) << " -- Tiempo total: " << tiempo_total
               << " -- Desviacion tipica tiempo: "
               << calcular_desviacion_tipica(tiempos) << " -- Coeficiente de variacion tiempo: ";
 
@@ -544,7 +543,7 @@ void lanzar_algoritmo(mapa parametros) {
 
         std::vector<double> valores, tiempos;
         int coste = 0, menor_coste = INFINITO_POSITIVO;
-        double menor_tiempo = INFINITO_POSITIVO;
+        double tiempo_total = 0;
         std::chrono::duration<double> tiempo_transcurrido{};
 
         leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
@@ -553,30 +552,31 @@ void lanzar_algoritmo(mapa parametros) {
 
         if (algoritmo == ALGORITMO_GREEDY) {
             algoritmo_greedy(tamanno_matriz, flujo, distancia);
+            continue;
         } else if (algoritmo == ALGORITMO_PRIMERO_MEJOR) {
             for (const auto &semilla: semillas) {
                 coste = primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla,
                                           tiempo_transcurrido).second;
-                actualizar_datos_estadisticos(coste, menor_coste, menor_tiempo, valores,
+                actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
                                               tiempo_transcurrido.count() * 100, tiempos);
             }
         } else if (algoritmo == ALGORITMO_TABU) {
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas, coste, menor_coste, valores, tiempos, menor_tiempo) private(tiempo_transcurrido) if(PRAGMA)
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas, coste, menor_coste, valores, tiempos, tiempo_total) private(tiempo_transcurrido) if(PRAGMA)
             for (const auto &semilla: semillas) {
                 coste = tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
-                actualizar_datos_estadisticos(coste, menor_coste, menor_tiempo, valores,
+                actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
                                               tiempo_transcurrido.count() * 100, tiempos);
             }
         } else if (algoritmo == ALGORITMO_GRASP) {
             for (const auto &semilla: semillas) {
                 coste = grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
-                actualizar_datos_estadisticos(coste, menor_coste, menor_tiempo, valores,
+                actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
                                               tiempo_transcurrido.count() * 100, tiempos);
             }
         }
 
         if (STATS) {
-            imprimir_datos_estadisticos(archivo_datos, parametros, valores, menor_coste, menor_tiempo, tiempos);
+            imprimir_datos_estadisticos(archivo_datos, parametros, valores, menor_coste, tiempo_total, tiempos);
         }
     }
 }
