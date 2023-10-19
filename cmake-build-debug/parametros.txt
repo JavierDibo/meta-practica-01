@@ -8,18 +8,19 @@ algoritmo=4
 # Imprimir datos por consola
 echo=true
 
-# Crear archivos log
-log=false
+# Mostrar datos estadisticos por consola
+statistics=true
 
 # Activa la paralelizacion (3~7x rendimiento)
 pragma=true
 
-# Mostrar datos estadisticos por consola
-statistics=true
+# Crear archivos log
+log=false
 
-# Si 1 entonces diversifica siempre si 0 entonces intensifica
+# Si tiende a 1 entonces diversifica mas, si tiende a 0 entonces intensifica mas
 porcentaje_oscilar=0.50
 
+# Nombre de los archivos de datos
 datos=ford01.dat,ford02.dat,ford03.dat,ford04.dat
 
 max_iteraciones=1000
