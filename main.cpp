@@ -823,8 +823,7 @@ void limpiar_memorias(std::vector<movimiento> &lista_tabu_implicita, matriz &lis
 }
 
 vector iniciar_registro_costes() {
-    int tam = static_cast<int>(ITERACIONES_PARA_ESTANCAMIENTO);
-    vector vec(tam, INFINITO_NEGATIVO);
+    vector vec(ITERACIONES_PARA_ESTANCAMIENTO, INFINITO_NEGATIVO);
     return vec;
 }
 
@@ -952,7 +951,7 @@ std::ofstream inicializar_log_tabu(int semilla, const std::string &nombre_archiv
     if (archivo_log.is_open()) {
         archivo_log
                 << "Iteracion,Movimiento i,Movimiento j,Coste solucion,Delta,Etiqueta,Coste mejor local,Solucion,"
-                   "Max vecinos,Iteraciones estancamiento,Oscilacion,Tenencia,Iteraciones Max,\n";
+                   "Max vecinos,Iteraciones estancamiento,Oscilacion,Tenencia,Iteraciones Max\n";
     }
 
     return archivo_log;
