@@ -22,28 +22,33 @@ using movimiento = std::pair<int, int>;
 using matriz = std::vector<std::vector<int>>;
 using mapa = std::map<string, string>;
 
+// Definiciones
+
+#define ALGORITMO_GREEDY "GREEDY"
+#define ALGORITMO_PRIMERO_MEJOR "PRIMERO_MEJOR"
+#define ALGORITMO_TABU "TABU"
+#define ALGORITMO_GRASP "GRASP"
+#define INTENSIFICAR 1
+#define DIVERSIFICAR 0
+#define MILISEGUNDOS 1000
+
 // Variables globales
 
 vector semillas;
 bool ECHO = false;
 bool LOG = false;
-bool PRAGMA;
+[[maybe_unused]] bool PRAGMA;
+bool STATS;
 int TENENCIA_TABU = 0;
-std::vector<string> ARCHIVOS_DATOS;
 int ITERACIONES_PARA_ESTANCAMIENTO;
 int NUM_ITERACIONES_GRASP;
 int MAX_ITERACIONES = 0;
-int INTENSIFICAR = 1;
-int DIVERSIFICAR = 0;
 int NUMERO_MAX_VECINOS;
-double PROBABILIDAD_OSCILAR;
 int INFINITO_POSITIVO = std::numeric_limits<int>::max();
 int INFINITO_NEGATIVO = std::numeric_limits<int>::min();
 int VENTANA_GRASP;
-int SOLUCION, FIRST = 0;
-int COSTO, SECOND = 1;
-int ARCHIVO_LOG, THIRD = 2;
-
+double PROBABILIDAD_OSCILAR;
+std::vector<string> ARCHIVOS_DATOS;
 
 // Funciones
 
@@ -111,9 +116,6 @@ void escribir_log_tabu(std::ofstream &archivo_log, int iteraciones, movimiento m
                        const string &tag, const int &coste_mejor_local, const vector &solucion);
 
 std::vector<movimiento> ordenar_vector_greedy(const vector &sumas, bool descending = false);
-
-std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos,
-                                const int &semilla);
 
 std::vector<int> algoritmo_greedy_aletatorizado(int tamanno_matriz, const matriz &flujo, const matriz &distancia,
                                                 const int &semilla, const int &mint) {
@@ -186,11 +188,13 @@ void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &dis
 
     if (ECHO) {
         std::cout << "Coste: " << coste << std::endl;
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
     }
 }
 
-void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla);
+std::pair<vector, int>
+grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla,
+      std::chrono::duration<double> &tiempo_transcurrido);
 
 int main(int argc, char *argv[]) {
 
@@ -210,14 +214,15 @@ int main(int argc, char *argv[]) {
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
     if (ECHO) {
-        std::cout << "Tiempo TOTAL de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        std::cout << "Tiempo TOTAL de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos."
+                  << std::endl;
     }
 
     return 0;
 }
 
 std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos,
-                                const int &semilla) {
+                                const int &semilla, std::chrono::duration<double> &tiempo_transcurrido) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
@@ -358,8 +363,8 @@ std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &dista
     if (ECHO) {
         std::cout << "Algoritmo Tabu: " << std::endl;
         imprimir_resumen_semilla(semilla, mejor_local.second);
-        std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
         std::cout << "----------------------------------------" << std::endl;
     }
 
@@ -368,7 +373,8 @@ std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &dista
 
 
 std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo, const matriz &distancia,
-                                         const string &archivo_datos, const int &semilla) {
+                                         const string &archivo_datos, const int &semilla,
+                                         std::chrono::duration<double> &tiempo_transcurrido) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
@@ -391,7 +397,7 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
     std::ofstream log_file;
     if (LOG) { log_file = inicializar_log_primero_mejor(semilla, archivo_datos, "pm"); }
 
-    while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
+    while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < MAX_ITERACIONES) {
         for (int index: indices) {
             int i = index;
 
@@ -433,12 +439,97 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
     if (ECHO) {
         std::cout << "Algoritmo primero el mejor: " << std::endl;
         imprimir_resumen_semilla(semilla, coste_actual);
-        std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
         std::cout << "-----------------------------" << std::endl;
     }
 
     return std::make_pair(solucion_actual, coste_actual);
+}
+
+double calcular_desviacion_tipica(const std::vector<double> &valores) {
+
+    int n = static_cast<int>(valores.size());
+    if (n == 0) {
+        std::cerr << "Error: El vector de valores está vacío." << std::endl;
+        return 0.0;
+    }
+
+    double suma = 0.0;
+    for (const double &valor: valores) {
+        suma += valor;
+    }
+    double media = suma / n;
+
+    double diferencias_al_cuadrado = 0.0;
+    for (const double &valor: valores) {
+        double diferencia = valor - media;
+        diferencias_al_cuadrado += diferencia * diferencia;
+    }
+
+    double desviacion_tipica = std::sqrt(diferencias_al_cuadrado / n);
+
+    return desviacion_tipica;
+}
+
+double calcular_media(const std::vector<double> &valores) {
+
+    int n = static_cast<int>(valores.size());
+    if (n == 0) {
+        std::cerr << "Error: El vector de valores está vacío." << std::endl;
+        return 0.0;
+    }
+
+    double suma = 0.0;
+    for (const double &valor: valores) {
+        suma += valor;
+    }
+
+    double media = suma / n;
+    return media;
+}
+
+double calcular_coeficiente_variacion(const std::vector<double> &valores) {
+    double desviacion = calcular_desviacion_tipica(valores);
+    double media = calcular_media(valores);
+
+    if (media == 0.0) {
+        std::cerr << "Error: La media es igual a cero." << std::endl;
+        return 0.0;
+    }
+
+    double coeficienteVariacion = (desviacion / media) * 100.0;
+    return coeficienteVariacion;
+}
+
+void
+actualizar_datos_estadisticos(const int &coste, int &menor_coste, double &tiempo_total, std::vector<double> &valores,
+                              double tiempo,
+                              std::vector<double> &tiempos) {
+    if (coste < menor_coste)
+        menor_coste = coste;
+    tiempo_total += tiempo;
+    valores.push_back(coste);
+    tiempos.push_back(tiempo);
+}
+
+void imprimir_datos_estadisticos(const string &archivo_datos, mapa parametros, const std::vector<double> &valores,
+                                 const int &mejor_coste, const double &tiempo_total,
+                                 const std::vector<double> &tiempos) {
+    std::cout << archivo_datos << " con algoritmo " << parametros["algoritmo"] << std::endl;
+    std::cout << "Media coste: " << calcular_media(valores) << " -- Mejor coste: " << mejor_coste
+              << " -- Desviacion tipica coste: "
+              << calcular_desviacion_tipica(valores) << " -- Coeficiente de variacion coste: ";
+
+    printf("%.2f%%\n", calcular_coeficiente_variacion(valores));
+
+    std::cout << "Media tiempos: " << calcular_media(tiempos) << " -- Tiempo total: " << tiempo_total
+              << " -- Desviacion tipica tiempo: "
+              << calcular_desviacion_tipica(tiempos) << " -- Coeficiente de variacion tiempo: ";
+
+    printf("%.2f%%", calcular_coeficiente_variacion(tiempos));
+
+    std::cout << std::endl;
 }
 
 void lanzar_algoritmo(mapa parametros) {
@@ -448,23 +539,42 @@ void lanzar_algoritmo(mapa parametros) {
 
     for (const auto &archivo_datos: ARCHIVOS_DATOS) {
 
+        std::vector<double> valores, tiempos;
+        int coste = 0, menor_coste = INFINITO_POSITIVO;
+        double tiempo_total = 0;
+        std::chrono::duration<double> tiempo_transcurrido{};
+
         leer_matrices(archivo_datos, tamanno_matriz, flujo, distancia);
 
-        if (parametros["algoritmo"] == "greedy" || parametros["algoritmo"] == "1") {
+        string algoritmo = parametros["algoritmo"];
+
+        if (algoritmo == ALGORITMO_GREEDY) {
             algoritmo_greedy(tamanno_matriz, flujo, distancia);
-        } else if (parametros["algoritmo"] == "pm" || parametros["algoritmo"] == "2") {
+            continue;
+        } else if (algoritmo == ALGORITMO_PRIMERO_MEJOR) {
             for (const auto &semilla: semillas) {
-                primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
+                coste = primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla,
+                                          tiempo_transcurrido).second;
+                actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
+                                              tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
-        } else if (parametros["algoritmo"] == "tabu" || parametros["algoritmo"] == "3") {
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas) if(PRAGMA)
+        } else if (algoritmo == ALGORITMO_TABU) {
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas, coste, menor_coste, valores, tiempos, tiempo_total) private(tiempo_transcurrido) if(PRAGMA)
             for (const auto &semilla: semillas) {
-                tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
+                coste = tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
+                actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
+                                              tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
-        } else if (parametros["algoritmo"] == "grasp" || parametros["algoritmo"] == "4") {
+        } else if (algoritmo == ALGORITMO_GRASP) {
             for (const auto &semilla: semillas) {
-                grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla);
+                coste = grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
+                actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
+                                              tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
+        }
+
+        if (STATS) {
+            imprimir_datos_estadisticos(archivo_datos, parametros, valores, menor_coste, tiempo_total, tiempos);
         }
     }
 }
@@ -505,6 +615,25 @@ mapa lectura_parametros(const string &nombre_archivo) {
         string seed;
         while (std::getline(ss, seed, ',')) {
             semillas.push_back(std::stoi(seed));
+        }
+    }
+
+    if (parametros.find("algoritmo") != parametros.end()) {
+
+        if (parametros["algoritmo"] == "1" || parametros["algoritmo"] == "greedy") {
+            parametros["algoritmo"] = "GREEDY";
+        }
+
+        if (parametros["algoritmo"] == "2" || parametros["algoritmo"] == "pm") {
+            parametros["algoritmo"] = "PRIMERO_MEJOR";
+        }
+
+        if (parametros["algoritmo"] == "3" || parametros["algoritmo"] == "tabu") {
+            parametros["algoritmo"] = "TABU";
+        }
+
+        if (parametros["algoritmo"] == "4" || parametros["algoritmo"] == "grasp") {
+            parametros["algoritmo"] = "GRASP";
         }
     }
 
@@ -555,6 +684,10 @@ mapa lectura_parametros(const string &nombre_archivo) {
 
     if (parametros.find("pragma") != parametros.end()) {
         PRAGMA = (parametros["pragma"] == "true");
+    }
+
+    if (parametros.find("statistics") != parametros.end()) {
+        STATS = (parametros["statistics"] == "true");
     }
 
     return parametros;
@@ -1167,7 +1300,7 @@ void purge_grasp_logs(const int &mejor, const int &semilla, const string &archiv
     string num = archivo_datos.substr(start, end - start);
 
     // Construir la lista de nombres de archivos posibles
-    for (int i = 0; i <= 100; i++) {
+    for (int i = 0; i <= MILISEGUNDOS; i++) {
         string filename =
                 "logs/grasp/ford0" + num + "_grasp_" + std::to_string(i) + "_" + std::to_string(semilla) + ".csv";
 
@@ -1186,7 +1319,8 @@ void purge_grasp_logs(const int &mejor, const int &semilla, const string &archiv
     }
 }
 
-void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos, const int &semilla) {
+std::pair<vector, int> grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos,
+                             const int &semilla, std::chrono::duration<double> &tiempo_transcurrido) {
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
@@ -1209,14 +1343,17 @@ void grasp(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &a
     }
 
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
 
     if (LOG) { purge_grasp_logs(mejor, semilla, archivo_datos); }
+
+    tiempo_transcurrido = tiempo_fin - tiempo_inicio;
 
     if (ECHO) {
         std::cout << "Algoritmo GRASP: " << std::endl;
         imprimir_resumen_semilla(semilla, mejor_solucion.second);
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() << " segundos." << std::endl;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
         std::cout << "---------------------------------------" << std::endl;
     }
+
+    return mejor_solucion;
 }
