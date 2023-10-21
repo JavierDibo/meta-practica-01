@@ -3,10 +3,10 @@ semilla=77646884,47764688,84776468,88477646,68847764
 
 # Algoritmos implementados: greedy || 1 || pm || 2 || tabu || 3 || grasp || 4
 # Uso: algoritmo=1 -- algoritmo=tabu -- etc
-algoritmo=3
+algoritmo=4
 
 # Imprimir datos por consola
-echo=false
+echo=true
 
 # Mostrar datos estadisticos por consola
 statistics=true

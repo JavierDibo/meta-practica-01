@@ -31,7 +31,7 @@ using mapa = std::map<string, string>;
 
 // Variables globales
 
-vector semillas;
+vector SEMILLAS;
 bool ECHO;
 bool LOG;
 [[maybe_unused]] bool PRAGMA;
@@ -490,7 +490,7 @@ std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &dista
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
     // Solucion inicial aleatoria
-    vector solucion_inicial = vector_aleatorio(tamanno_matriz, semillas[0]);
+    vector solucion_inicial = vector_aleatorio(tamanno_matriz, semilla);
 
     // Iniciacion de variables para el algoritmo
     vector solucion_actual = solucion_inicial;
@@ -817,21 +817,21 @@ void lanzar_algoritmo(mapa parametros) {
             algoritmo_greedy(tamanno_matriz, flujo, distancia);
             continue;
         } else if (algoritmo == ALGORITMO_PRIMERO_MEJOR) {
-            for (const auto &semilla: semillas) {
+            for (const auto &semilla: SEMILLAS) {
                 coste = primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla,
                                           tiempo_transcurrido).second;
                 actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
                                               tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
         } else if (algoritmo == ALGORITMO_TABU) {
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas, coste, menor_coste, valores, tiempos, tiempo_total) private(tiempo_transcurrido) if(PRAGMA)
-            for (const auto &semilla: semillas) {
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, SEMILLAS, coste, menor_coste, valores, tiempos, tiempo_total) private(tiempo_transcurrido) if(PRAGMA)
+            for (const auto &semilla: SEMILLAS) {
                 coste = tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
                 actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
                                               tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
         } else if (algoritmo == ALGORITMO_GRASP) {
-            for (const auto &semilla: semillas) {
+            for (const auto &semilla: SEMILLAS) {
                 coste = grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
                 actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
                                               tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
@@ -879,8 +879,14 @@ mapa lectura_parametros(const string &nombre_archivo) {
         std::stringstream ss(seeds_string);
         string seed;
         while (std::getline(ss, seed, ',')) {
-            semillas.push_back(std::stoi(seed));
+            SEMILLAS.push_back(std::stoi(seed));
         }
+    }
+
+    if (SEMILLAS.empty()) {
+        SEMILLAS.push_back(12345678);
+        SEMILLAS.push_back(23456781);
+        SEMILLAS.push_back(34567812);
     }
 
     if (parametros.find("algoritmo") != parametros.end()) {
