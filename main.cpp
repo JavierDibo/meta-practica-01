@@ -622,11 +622,12 @@ std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &dista
 
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
 
+    tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+
 #pragma omp critical
     if (ECHO) {
         std::cout << "Algoritmo Tabu: " << std::endl;
         imprimir_resumen_semilla(semilla, mejor_local.second);
-        tiempo_transcurrido = tiempo_fin - tiempo_inicio;
         std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos."
                   << std::endl;
         std::cout << "----------------------------------------" << std::endl;
@@ -699,10 +700,11 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
 
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
 
+    tiempo_transcurrido = tiempo_fin - tiempo_inicio;
+
     if (ECHO) {
         std::cout << "Algoritmo primero el mejor: " << std::endl;
         imprimir_resumen_semilla(semilla, coste_actual);
-        tiempo_transcurrido = tiempo_fin - tiempo_inicio;
         std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos."
                   << std::endl;
         std::cout << "-----------------------------" << std::endl;
