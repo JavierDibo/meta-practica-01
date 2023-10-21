@@ -28,20 +28,21 @@ using mapa = std::map<string, string>;
 #define ALGORITMO_PRIMERO_MEJOR "PRIMERO_MEJOR"
 #define ALGORITMO_TABU "TABU"
 #define ALGORITMO_GRASP "GRASP"
+#define MILISEGUNDOS 1000
+#define INTENSIFICAR 1
+#define DIVERSIFICAR 0
 
 // Variables globales
 
 vector semillas;
-bool ECHO = false;
-bool LOG = false;
+bool ECHO;
+bool LOG;
 [[maybe_unused]] bool PRAGMA;
 bool STATS;
-int TENENCIA_TABU = 0;
+int TENENCIA_TABU;
 int ITERACIONES_PARA_ESTANCAMIENTO;
 int NUM_ITERACIONES_GRASP;
-int MAX_ITERACIONES = 0;
-int INTENSIFICAR = 1;
-int DIVERSIFICAR = 0;
+int MAX_ITERACIONES;
 int NUMERO_MAX_VECINOS;
 int INFINITO_POSITIVO = std::numeric_limits<int>::max();
 int INFINITO_NEGATIVO = std::numeric_limits<int>::min();
@@ -50,6 +51,8 @@ double PROBABILIDAD_OSCILAR;
 std::vector<string> ARCHIVOS_DATOS;
 
 // Funciones
+
+double PORCENTAJE_CEROS_DLB;
 
 void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &distancia);
 
@@ -115,9 +118,6 @@ void escribir_log_tabu(std::ofstream &archivo_log, int iteraciones, movimiento m
                        const string &tag, const int &coste_mejor_local, const vector &solucion);
 
 std::vector<movimiento> ordenar_vector_greedy(const vector &sumas, bool descending = false);
-
-std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &distancia, const string &archivo_datos,
-                                const int &semilla);
 
 std::vector<int> algoritmo_greedy_aletatorizado(int tamanno_matriz, const matriz &flujo, const matriz &distancia,
                                                 const int &semilla, const int &mint) {
@@ -190,7 +190,7 @@ void algoritmo_greedy(int tamanno_matriz, const matriz &flujo, const matriz &dis
 
     if (ECHO) {
         std::cout << "Coste: " << coste << std::endl;
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * 100 << " milisegundos." << std::endl;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
     }
 }
 
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
     auto tiempo_fin = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> tiempo_transcurrido = tiempo_fin - tiempo_inicio;
     if (ECHO) {
-        std::cout << "Tiempo TOTAL de ejecucion: " << tiempo_transcurrido.count() * 100 << " milisegundos."
+        std::cout << "Tiempo TOTAL de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos."
                   << std::endl;
     }
 
@@ -366,13 +366,12 @@ std::pair<vector, int> tabu_mar(int tamanno_matriz, matriz &flujo, matriz &dista
         std::cout << "Algoritmo Tabu: " << std::endl;
         imprimir_resumen_semilla(semilla, mejor_local.second);
         tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * 100 << " milisegundos." << std::endl;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
         std::cout << "----------------------------------------" << std::endl;
     }
 
     return mejor_local;
 }
-
 
 std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo, const matriz &distancia,
                                          const string &archivo_datos, const int &semilla,
@@ -399,7 +398,7 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
     std::ofstream log_file;
     if (LOG) { log_file = inicializar_log_primero_mejor(semilla, archivo_datos, "pm"); }
 
-    while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < 1000) {
+    while (std::accumulate(DLB.begin(), DLB.end(), 0) < tamanno_matriz && iteraciones < MAX_ITERACIONES) {
         for (int index: indices) {
             int i = index;
 
@@ -442,7 +441,7 @@ std::pair<vector, int> primero_mejor_DLB(int tamanno_matriz, const matriz &flujo
         std::cout << "Algoritmo primero el mejor: " << std::endl;
         imprimir_resumen_semilla(semilla, coste_actual);
         tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * 100 << " milisegundos." << std::endl;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
         std::cout << "-----------------------------" << std::endl;
     }
 
@@ -558,20 +557,20 @@ void lanzar_algoritmo(mapa parametros) {
                 coste = primero_mejor_DLB(tamanno_matriz, flujo, distancia, archivo_datos, semilla,
                                           tiempo_transcurrido).second;
                 actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
-                                              tiempo_transcurrido.count() * 100, tiempos);
+                                              tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
         } else if (algoritmo == ALGORITMO_TABU) {
 #pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, semillas, coste, menor_coste, valores, tiempos, tiempo_total) private(tiempo_transcurrido) if(PRAGMA)
             for (const auto &semilla: semillas) {
                 coste = tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
                 actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
-                                              tiempo_transcurrido.count() * 100, tiempos);
+                                              tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
         } else if (algoritmo == ALGORITMO_GRASP) {
             for (const auto &semilla: semillas) {
                 coste = grasp(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
                 actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
-                                              tiempo_transcurrido.count() * 100, tiempos);
+                                              tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
         }
 
@@ -692,6 +691,10 @@ mapa lectura_parametros(const string &nombre_archivo) {
         STATS = (parametros["statistics"] == "true");
     }
 
+    if (parametros.find("porcetaje_ceros_DLB") != parametros.end()) {
+        PORCENTAJE_CEROS_DLB = std::stod(parametros["porcetaje_ceros_DLB"]);
+    }
+
     return parametros;
 }
 
@@ -794,7 +797,7 @@ vector vector_aleatorio(int tamanno_matriz, int semilla) {
 
 vector randomizar_DLB(const int semilla, const int tam, int &num_reseteos_DLB) {
     std::default_random_engine random(semilla + num_reseteos_DLB);
-    std::bernoulli_distribution distribucion(0.5);
+    std::bernoulli_distribution distribucion(PORCENTAJE_CEROS_DLB);
     vector vec;
 
     for (int i = 0; i < tam; i++) {
@@ -1012,7 +1015,7 @@ vector intensificar(const matriz &memoria_largo_plazo, const int &semilla, const
         } else {
             std::vector<int> temp = fila;
             while (usados[indice]) {
-                temp[indice] = std::numeric_limits<int>::max();
+                temp[indice] = INFINITO_POSITIVO;
                 indice = static_cast<int>(std::distance(temp.begin(), std::min_element(temp.begin(), temp.end())));
             }
             resultado.push_back(indice);
@@ -1087,7 +1090,7 @@ std::ofstream inicializar_log_tabu(int semilla, const std::string &nombre_archiv
     if (archivo_log.is_open()) {
         archivo_log
                 << "Iteracion,Movimiento i,Movimiento j,Coste solucion,Delta,Etiqueta,Coste mejor local,Solucion,"
-                   "Max vecinos,Iteraciones estancamiento,Oscilacion,Tenencia,Iteraciones Max,\n";
+                   "Max vecinos,Iteraciones estancamiento,Oscilacion,Tenencia,Iteraciones Max\n";
     }
 
     return archivo_log;
@@ -1303,7 +1306,7 @@ void purge_grasp_logs(const int &mejor, const int &semilla, const string &archiv
     string num = archivo_datos.substr(start, end - start);
 
     // Construir la lista de nombres de archivos posibles
-    for (int i = 0; i <= 100; i++) {
+    for (int i = 0; i <= MILISEGUNDOS; i++) {
         string filename =
                 "logs/grasp/ford0" + num + "_grasp_" + std::to_string(i) + "_" + std::to_string(semilla) + ".csv";
 
@@ -1354,7 +1357,7 @@ std::pair<vector, int> grasp(int tamanno_matriz, matriz &flujo, matriz &distanci
     if (ECHO) {
         std::cout << "Algoritmo GRASP: " << std::endl;
         imprimir_resumen_semilla(semilla, mejor_solucion.second);
-        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * 100 << " milisegundos." << std::endl;
+        std::cout << "Tiempo de ejecucion: " << tiempo_transcurrido.count() * MILISEGUNDOS << " milisegundos." << std::endl;
         std::cout << "---------------------------------------" << std::endl;
     }
 
