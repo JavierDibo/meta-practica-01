@@ -10,9 +10,6 @@
 #include <iomanip>
 #include <filesystem>
 #include <set>
-#include <iostream>
-#include <fstream>
-#include <filesystem>
 
 // Typedefs
 
@@ -961,8 +958,7 @@ void limpiar_memorias(std::vector<movimiento> &lista_tabu_implicita, matriz &lis
 }
 
 vector iniciar_registro_costes() {
-    int tam = static_cast<int>(ITERACIONES_PARA_ESTANCAMIENTO);
-    vector vec(tam, INFINITO_NEGATIVO);
+    vector vec(ITERACIONES_PARA_ESTANCAMIENTO, INFINITO_NEGATIVO);
     return vec;
 }
 
