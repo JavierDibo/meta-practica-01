@@ -3,7 +3,8 @@ project(meta_practica_01)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(meta_practica_01 main.cpp)
+add_executable(meta_practica_01 main.cpp
+)
 
 find_package(OpenMP)
 if(OPENMP_FOUND)
