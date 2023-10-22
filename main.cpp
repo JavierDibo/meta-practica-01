@@ -34,7 +34,7 @@ using mapa = std::map<string, string>;
 vector SEMILLAS;
 bool ECHO;
 bool LOG;
-[[maybe_unused]] bool PRAGMA;
+[[maybe_unused]] bool PARALELIZACION;
 bool STATS;
 int TENENCIA_TABU;
 int ITERACIONES_PARA_ESTANCAMIENTO;
@@ -824,7 +824,7 @@ void lanzar_algoritmo(mapa parametros) {
                                               tiempo_transcurrido.count() * MILISEGUNDOS, tiempos);
             }
         } else if (algoritmo == ALGORITMO_TABU) {
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, SEMILLAS, coste, menor_coste, valores, tiempos, tiempo_total) private(tiempo_transcurrido) if(PRAGMA)
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, archivo_datos, SEMILLAS, coste, menor_coste, valores, tiempos, tiempo_total) private(tiempo_transcurrido) if(PARALELIZACION)
             for (const auto &semilla: SEMILLAS) {
                 coste = tabu_mar(tamanno_matriz, flujo, distancia, archivo_datos, semilla, tiempo_transcurrido).second;
                 actualizar_datos_estadisticos(coste, menor_coste, tiempo_total, valores,
@@ -937,7 +937,7 @@ mapa lectura_parametros(const string &nombre_archivo) {
         std::stringstream ss(archivos_string);
         string archivo;
         while (getline(ss, archivo, ',')) {
-            ARCHIVOS_DATOS.push_back("datos/" + archivo);
+            ARCHIVOS_DATOS.push_back(archivo);
         }
     }
 
@@ -953,8 +953,8 @@ mapa lectura_parametros(const string &nombre_archivo) {
         VENTANA_GRASP = std::stoi(parametros["ventana_grasp"]);
     }
 
-    if (parametros.find("pragma") != parametros.end()) {
-        PRAGMA = (parametros["pragma"] == "true");
+    if (parametros.find("paralelizacion") != parametros.end()) {
+        PARALELIZACION = (parametros["paralelizacion"] == "true");
     }
 
     if (parametros.find("statistics") != parametros.end()) {
@@ -1386,10 +1386,10 @@ std::pair<vector, int> grasp(int tamanno_matriz, matriz &flujo, matriz &distanci
 
     auto tiempo_inicio = std::chrono::high_resolution_clock::now();
 
-    std::pair<vector, int> mejor_solucion = {vector(tamanno_matriz, 0), INT_MAX};
+    std::pair<vector, int> mejor_solucion = {vector(tamanno_matriz, 0), INFINITO_POSITIVO};
     int mejor = -1;
 
-#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, semilla, NUM_ITERACIONES_GRASP, archivo_datos, mejor_solucion, mejor) if (PRAGMA)
+#pragma omp parallel for default(none) shared(tamanno_matriz, flujo, distancia, semilla, NUM_ITERACIONES_GRASP, archivo_datos, mejor_solucion, mejor) if (PARALELIZACION)
     for (int iteracion = 0; iteracion < NUM_ITERACIONES_GRASP; ++iteracion) {
 
         vector solucion_inicial = algoritmo_greedy_aletatorizado(tamanno_matriz, flujo, distancia, semilla,

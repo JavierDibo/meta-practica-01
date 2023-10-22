@@ -12,7 +12,7 @@ echo=true
 statistics=true
 
 # Activa la paralelizacion (3~7x rendimiento)
-pragma=true
+paralelizacion=true
 
 # Crear archivos log
 log=false
@@ -21,7 +21,7 @@ log=false
 porcentaje_oscilar=0.50
 
 # Nombre de los archivos de datos
-datos=ford01.dat,ford02.dat,ford03.dat,ford04.dat
+datos=datos/ford01.dat,datos/ford02.dat,datos/ford03.dat,datos/ford04.dat
 
 max_iteraciones=1000
 tenencia_tabu=7
